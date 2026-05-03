@@ -38,7 +38,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'BarberChop',
+    title: 'BarberShop',
   },
   twitter: {
     card: 'summary_large_image',

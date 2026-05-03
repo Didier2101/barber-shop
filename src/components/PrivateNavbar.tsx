@@ -63,7 +63,7 @@ export function PrivateNavbar() {
             <Scissors size={16} className="text-black" />
           </div>
           <span className="text-lg font-black tracking-tighter uppercase text-white hidden sm:block">
-            BARBER<span className="text-[#f59e0b]">CHOP</span>
+            BARBER<span className="text-[#f59e0b]">SHOP</span>
           </span>
         </Link>
 

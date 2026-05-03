@@ -86,7 +86,7 @@ export default function Home() {
           </div>
           
           <h1 className="text-white text-[clamp(3rem,12vw,8rem)] font-black leading-[0.85] tracking-tighter uppercase italic">
-            Barber<span className="text-[#f59e0b]">Chop</span>
+            Barber<span className="text-[#f59e0b]">Shop</span>
           </h1>
           
           <p className="text-white/60 text-lg md:text-2xl max-w-2xl mx-auto font-medium leading-relaxed italic">

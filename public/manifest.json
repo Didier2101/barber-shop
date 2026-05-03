@@ -1,6 +1,6 @@
 {
-  "name": "BarberChop",
-  "short_name": "BarberChop",
+  "name": "BarberShop",
+  "short_name": "BarberShop",
   "description": "Tu barbería premium de confianza",
   "start_url": "/",
   "display": "standalone",
