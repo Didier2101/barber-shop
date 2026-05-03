@@ -1,36 +1,84 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# BarberShop (kavvo.store)
 
-## Getting Started
+Aplicacion de barberia construida con Next.js 15 + Supabase.
 
-First, run the development server:
+## Requisitos
+
+- Node.js 20+
+- Cuenta de Supabase
+- Cuenta de GitHub
+- Cuenta de Vercel
+- Dominio en Hostinger (`kavvo.store`)
+
+## Variables de entorno
+
+1. Copia `.env.example` a `.env.local`.
+2. Completa valores reales:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+NEXT_PUBLIC_SITE_URL=https://kavvo.store
+NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Desarrollo local
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm install
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Build de validacion
 
-## Learn More
+Antes de subir a GitHub:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm run build
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Deploy en Vercel
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. Sube el repo a GitHub.
+2. En Vercel: **Add New Project** > selecciona el repo.
+3. Framework detectado: **Next.js**.
+4. En **Environment Variables** agrega:
+   - `NEXT_PUBLIC_SITE_URL=https://kavvo.store`
+   - `NEXT_PUBLIC_SUPABASE_URL=...`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY=...`
+5. Deploy.
 
-## Deploy on Vercel
+## Conectar dominio `kavvo.store` (Hostinger -> Vercel)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+En Vercel > Project > **Settings** > **Domains**:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Agrega:
+   - `kavvo.store`
+   - `www.kavvo.store`
+2. Vercel mostrara los DNS records requeridos.
+
+En Hostinger (DNS Zone) crea/ajusta:
+
+- `A` record:
+  - Host: `@`
+  - Value: `76.76.21.21`
+- `CNAME` record:
+  - Host: `www`
+  - Value: `cname.vercel-dns.com`
+
+Luego vuelve a Vercel y verifica dominio.
+
+## SEO tecnico ya preparado
+
+- Metadata global (`title template`, Open Graph, Twitter, canonical base).
+- `robots.txt` dinamico en `src/app/robots.ts`.
+- `sitemap.xml` dinamico en `src/app/sitemap.ts`.
+- Estructura de encabezados cuidada por pagina (1 `h1` por vista).
+
+## Checklist de salida a produccion
+
+- [ ] Variables en Vercel configuradas para Production / Preview / Development.
+- [ ] Build local sin errores (`npm run build`).
+- [ ] Dominio validado en Vercel.
+- [ ] HTTPS activo en `kavvo.store`.
+- [ ] Prueba de rutas publicas: `/`, `/servicios`, `/barberos`, `/nosotros`, `/contacto`.
+- [ ] Prueba de auth: `/login`, `/register`, `/dashboard`.
