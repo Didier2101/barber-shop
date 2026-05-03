@@ -1,9 +1,8 @@
 'use client';
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { User, Lock, Scissors, LogIn, Eye, EyeOff } from 'lucide-react';
+import { User, Lock, Scissors, LogIn, Eye, EyeOff, Loader2 } from 'lucide-react';
 
 import { useGlobalStore } from '@/store/useGlobalStore';
 
@@ -17,7 +16,6 @@ function toFriendlyAuthError(message: string) {
 }
 
 export default function Login() {
-  const router = useRouter();
   const setUserProfile = useGlobalStore(state => state.setUserProfile);
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -42,28 +40,49 @@ export default function Login() {
       ? normalizedIdentifier
       : `${normalizedIdentifier.replace(/\s+/g, '')}@barbershop.local`;
 
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email: loginEmail,
-      password,
-    });
+    try {
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: loginEmail,
+        password,
+      });
 
-    if (authError) {
-      setLoading(false);
-      setError(toFriendlyAuthError(authError.message));
-    } else if (authData?.user) {
+      if (authError) {
+        setLoading(false);
+        setError(toFriendlyAuthError(authError.message));
+        return;
+      }
+
+      if (!authData?.user) {
+        setLoading(false);
+        setError('No se pudo verificar tu sesion. Intenta de nuevo.');
+        return;
+      }
+
       // Fetch profile to set in store
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', authData.user.id)
         .single();
 
-      if (profile) {
-        setUserProfile(profile);
+      if (profileError || !profile) {
+        setLoading(false);
+        setError('Tu cuenta existe pero no tiene un perfil activo. Contacta al administrador.');
+        return;
       }
 
-      document.cookie = "barbershop-auth=true; path=/; max-age=86400";
-      router.push('/dashboard');
+      setUserProfile(profile);
+
+      // Usamos una cookie con SameSite=Lax para que el middleware la reciba
+      // en el siguiente request (hard redirect). router.push no garantiza esto.
+      document.cookie = 'barbershop-auth=true; path=/; max-age=86400; SameSite=Lax';
+
+      // Hard redirect para que el middleware procese la cookie correctamente en produccion
+      window.location.href = `/dashboard/${profile.role}/${profile.id}`;
+
+    } catch {
+      setLoading(false);
+      setError('Error de conexion. Verifica tu internet e intenta de nuevo.');
     }
   };
 
@@ -148,8 +167,11 @@ export default function Login() {
                     disabled={loading}
                     className="w-full bg-[#f59e0b] hover:bg-white text-black h-12.5 rounded-xl font-black uppercase tracking-[0.18em] text-[11px] transition-all flex items-center justify-center gap-2.5 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {loading ? (
-                      'Iniciando sesion...'
+                  {loading ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 size={15} className="animate-spin" />
+                        Entrando a tu cuenta...
+                      </span>
                     ) : (
                       <>
                         Entrar a Mi Cuenta
