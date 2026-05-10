@@ -26,16 +26,19 @@ export function usePromotions() {
   return useQuery({
     queryKey: ['promotions', 'active'],
     queryFn: async () => {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Comparar contra el inicio del día
+
       const { data, error } = await supabase
         .from('promotions')
         .select('*')
         .eq('is_active', true)
-        .gte('end_date', new Date().toISOString());
+        .gte('end_date', today.toISOString());
       
       if (error) throw error;
       return data as Promotion[];
     },
-    staleTime: 1000 * 60 * 15, // Las promociones cambian poco, las cacheamos 15 min
+    staleTime: 0, // Forzamos datos siempre frescos durante las pruebas
   });
 }
 

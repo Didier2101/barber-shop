@@ -18,6 +18,7 @@ export function MobileBottomNav() {
     { href: `/dashboard/barber/${userProfile.id}?tab=inicio`, label: 'Dashboard', icon: LayoutDashboard },
     { href: `/dashboard/barber/${userProfile.id}?tab=agenda`, label: 'Agenda', icon: CalendarDays },
     { href: `/dashboard/barber/${userProfile.id}?tab=estadisticas`, label: 'Finanzas', icon: TrendingUp },
+    { href: `/dashboard/barber/${userProfile.id}?tab=perfil`, label: 'Ajustes', icon: UserCircle },
   ] : [
      // Owner links can go here or keep top nav
      { href: '/dashboard', label: 'Inicio', icon: LayoutDashboard },

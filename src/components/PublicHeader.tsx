@@ -6,16 +6,30 @@ import { supabase } from '@/lib/supabase';
 
 export function PublicHeader() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [dashboardHref, setDashboardHref] = useState<string | null>(null);
 
   useEffect(() => {
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      setIsLoggedIn(!!session);
+      if (!session?.user) return;
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id, role')
+        .eq('id', session.user.id)
+        .maybeSingle();
+
+      if (!profile) return;
+
+      if (profile.role === 'owner') setDashboardHref('/dashboard/owner');
+      else if (profile.role === 'barber') setDashboardHref(`/dashboard/barber/${profile.id}`);
+      else setDashboardHref(`/dashboard/client/${profile.id}`);
     };
     checkSession();
   }, []);
-  
+
+  const isLoggedIn = !!dashboardHref;
+
   const publicLinks = [
     { href: '/servicios', label: 'SERVICIOS' },
     { href: '/nosotros', label: 'NOSOTROS' },
@@ -53,9 +67,13 @@ export function PublicHeader() {
           </div>
 
           <div className="flex items-center gap-4">
-            <Link href="/login" className="hidden sm:block text-[10px] font-black uppercase tracking-[0.1em] px-2 sm:px-3 py-2 text-white/60 hover:text-[#f59e0b] transition-colors">INICIAR SESIÓN</Link>
+            {!isLoggedIn && (
+              <Link href="/login" className="hidden sm:block text-[10px] font-black uppercase tracking-[0.1em] px-2 sm:px-3 py-2 text-white/60 hover:text-[#f59e0b] transition-colors">
+                INICIAR SESIÓN
+              </Link>
+            )}
             <Link 
-              href={isLoggedIn ? "/dashboard" : "/register"} 
+              href={isLoggedIn ? dashboardHref! : "/register"} 
               className="bg-[#f59e0b] hover:bg-white text-black px-4 sm:px-8 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.1em] transition-all shadow-lg"
             >
               {isLoggedIn ? "MI CUENTA" : "RESERVAR"}
@@ -87,17 +105,19 @@ export function PublicHeader() {
               </Link>
             ))}
             <div className="grid grid-cols-2 gap-2 pt-2">
+              {!isLoggedIn && (
+                <Link
+                  href="/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="text-center px-3 py-3 rounded-lg border border-white/10 text-white/70 hover:text-white transition-all text-[11px] font-black uppercase tracking-[0.14em]"
+                >
+                  INICIAR SESIÓN
+                </Link>
+              )}
               <Link
-                href="/login"
+                href={isLoggedIn ? dashboardHref! : "/register"}
                 onClick={() => setMobileMenuOpen(false)}
-                className="text-center px-3 py-3 rounded-lg border border-white/10 text-white/70 hover:text-white transition-all text-[11px] font-black uppercase tracking-[0.14em]"
-              >
-                INICIAR SESIÓN
-              </Link>
-              <Link
-                href={isLoggedIn ? "/dashboard" : "/register"}
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-center px-3 py-3 rounded-lg bg-[#f59e0b] hover:bg-white text-black transition-all text-[11px] font-black uppercase tracking-[0.14em]"
+                className={`text-center px-3 py-3 rounded-lg bg-[#f59e0b] hover:bg-white text-black transition-all text-[11px] font-black uppercase tracking-[0.14em] ${!isLoggedIn ? '' : 'col-span-2'}`}
               >
                 {isLoggedIn ? "MI CUENTA" : "RESERVAR"}
               </Link>

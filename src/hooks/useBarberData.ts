@@ -4,12 +4,12 @@ import { supabase } from '@/lib/supabase';
 import { Appointment, BarberSocial } from '@/types';
 import { startOfDay, endOfDay } from 'date-fns';
 
-// 1. Hook para citas del barbero (Pendientes y Agenda de Hoy/Día)
+// 1. Hook para citas del barbero (Pendientes, Hoy y Futuras)
 export function useBarberAgenda(barberId: string, dateStr?: string) {
   return useQuery({
     queryKey: ['barber-agenda', barberId, dateStr],
     queryFn: async () => {
-      // Cargar pendientes
+      // 1. Cargar pendientes de aprobación
       const { data: pending } = await supabase
         .from('appointments')
         .select(`*, client:client_id(name)`)
@@ -17,10 +17,11 @@ export function useBarberAgenda(barberId: string, dateStr?: string) {
         .eq('status', 'pending')
         .order('start_time', { ascending: true });
 
-      // Cargar agenda de día objetivo
+      // 2. Cargar agenda de día objetivo (Hoy o seleccionado)
       const targetDate = dateStr ? new Date(dateStr) : new Date();
       const start = startOfDay(targetDate);
       const end = endOfDay(targetDate);
+      
       const { data: today } = await supabase
         .from('appointments')
         .select(`*, client:client_id(name)`)
@@ -30,9 +31,21 @@ export function useBarberAgenda(barberId: string, dateStr?: string) {
         .lte('start_time', end.toISOString())
         .order('start_time', { ascending: true });
 
+      // 3. Cargar TODAS las citas futuras (desde mañana en adelante)
+      // Solo si no estamos filtrando por un día específico muy lejano
+      const { data: upcoming } = await supabase
+        .from('appointments')
+        .select(`*, client:client_id(name)`)
+        .eq('barber_id', barberId)
+        .neq('status', 'pending')
+        .neq('status', 'cancelled')
+        .gt('start_time', end.toISOString())
+        .order('start_time', { ascending: true });
+
       return {
         pending: (pending || []) as Appointment[],
-        today: (today || []) as Appointment[]
+        today: (today || []) as Appointment[],
+        upcoming: (upcoming || []) as Appointment[]
       };
     },
     enabled: !!barberId,

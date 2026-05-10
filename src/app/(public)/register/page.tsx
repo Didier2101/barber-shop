@@ -62,8 +62,8 @@ export default function Register() {
         return setError('Tu cuenta fue creada, pero fallamos al guardar tu perfil. Intenta ingresar nuevamente.');
       }
       
-      document.cookie = "barbershop-auth=true; path=/; max-age=86400";
-      router.push('/dashboard');
+      document.cookie = "barbershop-auth=true; path=/; max-age=86400; SameSite=Lax";
+      router.push(`/dashboard/client/${data.user.id}`);
     }
   };
 

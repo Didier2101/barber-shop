@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { User, Lock, Scissors, LogIn, Eye, EyeOff, Loader2 } from 'lucide-react';
 
 import { useGlobalStore } from '@/store/useGlobalStore';
@@ -16,6 +17,7 @@ function toFriendlyAuthError(message: string) {
 }
 
 export default function Login() {
+  const router = useRouter();
   const setUserProfile = useGlobalStore(state => state.setUserProfile);
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -75,10 +77,15 @@ export default function Login() {
 
       // Usamos una cookie con SameSite=Lax para que el middleware la reciba
       // en el siguiente request (hard redirect). router.push no garantiza esto.
-      document.cookie = 'barbershop-auth=true; path=/; max-age=86400; SameSite=Lax';
-
-      // Hard redirect para que el middleware procese la cookie correctamente en produccion
-      window.location.href = `/dashboard/${profile.role}/${profile.id}`;
+      document.cookie = "barbershop-auth=true; path=/; max-age=86400; SameSite=Lax";
+      
+      if (profile.role === 'owner') {
+        router.push('/dashboard/owner');
+      } else if (profile.role === 'barber') {
+        router.push(`/dashboard/barber/${profile.id}`);
+      } else {
+        router.push(`/dashboard/client/${profile.id}`);
+      }
 
     } catch {
       setLoading(false);

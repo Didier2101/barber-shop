@@ -9,9 +9,11 @@ import { Promotion, LoyaltySettings } from '@/types';
 
 export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
   const [, setGlobalStats] = useState({ totalServices: 0, totalBarbers: 0 });
   const [activePromos, setActivePromos] = useState<Promotion[]>([]);
   const [loyalty, setLoyalty] = useState<LoyaltySettings | null>(null);
+  const [showFullRules, setShowFullRules] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -34,10 +36,13 @@ export default function Home() {
       }
       setGlobalStats({ totalServices: totalSrv, totalBarbers: barbersCount || 0 });
 
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
       const { data: promos } = await supabase.from('promotions')
         .select('*')
         .eq('is_active', true)
-        .gte('end_date', new Date().toISOString())
+        .gte('end_date', today.toISOString())
         .limit(3);
       if (promos) setActivePromos(promos);
 
@@ -55,7 +60,10 @@ export default function Home() {
     
     async function checkUser() {
       const { data: { session } } = await supabase.auth.getSession();
-      if (session) setIsLoggedIn(true);
+      if (session) {
+        setIsLoggedIn(true);
+        setUserId(session.user.id);
+      }
     }
     
     checkUser();
@@ -95,7 +103,7 @@ export default function Home() {
 
           <div className="flex justify-center pt-4">
             <Link 
-              href={isLoggedIn ? "/dashboard" : "/register"} 
+              href={isLoggedIn && userId ? `/dashboard/client/${userId}/reservas/select-barber` : "/register"} 
               className="bg-[#f59e0b] text-black px-16 py-6 rounded-[2.5rem] font-black tracking-[0.2em] hover:scale-105 active:scale-95 transition-all shadow-[0_20px_40px_-10px_rgba(245,158,11,0.5)] uppercase text-[11px]"
             >
               {isLoggedIn ? "AGENDAR NUEVA CITA" : "RESERVAR MI CITA AHORA"}
@@ -118,7 +126,7 @@ export default function Home() {
                 <p className="text-[#f59e0b] text-[10px] font-black uppercase tracking-[0.4em]">Oportunidades Flash</p>
                 <h2 className="text-5xl font-black uppercase tracking-tighter italic text-white">Ofertas <span className="text-[#f59e0b]">Limitadas</span></h2>
               </div>
-              <Link href="/dashboard" className="text-white/40 hover:text-[#f59e0b] transition-colors text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+              <Link href="/login" className="text-white/40 hover:text-[#f59e0b] transition-colors text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
                 Ver más <ChevronRight size={14} />
               </Link>
             </div>
@@ -170,9 +178,20 @@ export default function Home() {
                         Tu Lealtad <br />
                         Tiene <span className="text-[#f59e0b]">Premio</span>
                       </h2>
-                      <p className="text-white/40 text-lg md:text-xl font-medium max-w-md italic leading-relaxed">
-                        {loyalty.description || 'Únete a nuestro club exclusivo. Cada visita te acerca más a tu próximo servicio de lujo totalmente gratis.'}
-                      </p>
+                      <div className="space-y-4">
+                        <p className={`text-white/40 text-lg md:text-xl font-medium max-w-md italic leading-relaxed ${!showFullRules ? 'line-clamp-3' : ''}`}>
+                          {loyalty.description || 'Únete a nuestro club exclusivo. Cada visita te acerca más a tu próximo servicio de lujo totalmente gratis.'}
+                        </p>
+                        {loyalty.description && (
+                          <button 
+                            onClick={() => setShowFullRules(!showFullRules)}
+                            className="text-[#f59e0b] text-[10px] font-bold uppercase tracking-[0.2em] hover:opacity-80 transition-opacity flex items-center gap-2"
+                          >
+                            {showFullRules ? 'Ver menos reglas' : 'Leer todas las reglas'}
+                            <ChevronRight size={12} className={showFullRules ? '-rotate-90 transition-transform' : 'rotate-90 transition-transform'} />
+                          </button>
+                        )}
+                      </div>
                       <div className="flex items-center gap-4 text-xs font-black uppercase tracking-widest text-zinc-500">
                          <Calendar size={14} className="text-amber-500" />
                          Válido hasta {loyalty.end_date ? format(new Date(loyalty.end_date), 'dd MMM yyyy') : 'Aviso previo'}

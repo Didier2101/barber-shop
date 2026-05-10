@@ -1,8 +1,9 @@
 'use client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { Profile, Service, BusinessHour, Expense, ExpenseCategory, Settlement, Appointment } from '@/types';
+import { Profile, Service, BusinessHour, Expense, ExpenseCategory, Settlement, Appointment, Promotion } from '@/types';
 import { startOfDay, endOfDay, startOfMonth, format } from 'date-fns';
+import { toast } from 'sonner';
 
 // ─── 1. Datos base del dueño ────────────────────────────────────────────────
 export function useOwnerBaseData() {
@@ -18,12 +19,15 @@ export function useOwnerBaseData() {
         supabase.from('loyalty_settings').select('*').eq('id', 1).single(),
       ]);
 
+      const now = new Date().toISOString().split('T')[0];
+      const filteredPromotions = (promotions.data || []).filter(p => p.end_date >= now);
+
       return {
         barbers: (barbers.data || []) as Profile[],
         services: (services.data || []) as Service[],
         businessHours: (hours.data || []) as BusinessHour[],
         shopSettings: settings.data,
-        promotions: (promotions.data || []),
+        promotions: filteredPromotions as Promotion[],
         loyaltySettings: loyalty.data,
       };
     },
@@ -115,7 +119,7 @@ export function useBarberPendingSettlement(barberId: string | null) {
 }
 
 // ─── 6. Estadísticas financieras del dueño ───────────────────────────────────
-export function useOwnerStats(filter: string, range?: { from: Date; to?: Date }) {
+export function useOwnerStats(filter: string = 'today', range?: { from: Date; to?: Date }) {
   return useQuery({
     queryKey: ['owner-stats', filter, range],
     queryFn: async () => {
@@ -184,7 +188,122 @@ export function useOwnerStats(filter: string, range?: { from: Date; to?: Date })
   });
 }
 
-// ─── 7. Mutaciones ───────────────────────────────────────────────────────────
+// ─── 7. Barberos con servicios pendientes (para lista de cierres) ────────────
+export function useBarbersWithPendingServices() {
+  return useQuery({
+    queryKey: ['barbers-pending-services'],
+    queryFn: async () => {
+      const { data: apts } = await supabase
+        .from('appointments')
+        .select('barber_id, price, barber:barber_id(name, avatar_url, commission_percentage)')
+        .eq('status', 'completed')
+        .is('settlement_id', null);
+
+      const barbersMap: Record<string, { 
+        id: string; 
+        name: string; 
+        avatar_url?: string; 
+        commission_percentage: number; 
+        pendingCount: number; 
+        pendingTotal: number 
+      }> = {};
+
+      apts?.forEach(apt => {
+        const b = apt.barber as unknown as Profile;
+        if (!barbersMap[apt.barber_id]) {
+          barbersMap[apt.barber_id] = {
+            id: apt.barber_id,
+            name: b.name,
+            avatar_url: b.avatar_url,
+            commission_percentage: b.commission_percentage || 50,
+            pendingCount: 0,
+            pendingTotal: 0
+          };
+        }
+        barbersMap[apt.barber_id].pendingCount++;
+        barbersMap[apt.barber_id].pendingTotal += Number(apt.price);
+      });
+
+      return Object.values(barbersMap);
+    }
+  });
+}
+
+// ─── 8. Citas de Hoy para el Dueño ──────────────────────────────────────────
+export function useTodayAppointments() {
+  return useQuery({
+    queryKey: ['owner-today-appointments'],
+    queryFn: async () => {
+      const start = startOfDay(new Date());
+      const end = endOfDay(new Date());
+      const { data, error } = await supabase
+        .from('appointments')
+        .select('*, barber:barber_id(name)')
+        .gte('start_time', start.toISOString())
+        .lte('start_time', end.toISOString())
+        .order('start_time', { ascending: true });
+      if (error) throw error;
+      return (data || []) as (Appointment & { barber: { name: string } })[];
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
+// ─── 8. Gestión de Clientes ────────────────────────────────────────────────
+export function useOwnerClients() {
+  return useQuery({
+    queryKey: ['owner-clients'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*, appointments!client_id(start_time)')
+        .eq('role', 'client')
+        .eq('is_active', true)
+        .order('name');
+      
+      if (error) throw error;
+      
+      // Mapear para extraer la fecha del último servicio
+      return (data || []).map(p => {
+        const appointments = (p as unknown as { appointments: { start_time: string }[] }).appointments;
+        const lastApt = appointments && appointments.length > 0 
+          ? appointments.reduce((prev, current) => 
+              (new Date(prev.start_time) > new Date(current.start_time)) ? prev : current
+            ).start_time
+          : null;
+          
+        return {
+          ...p,
+          last_appointment: lastApt
+        };
+      }) as (Profile & { last_appointment: string | null })[];
+    },
+  });
+}
+
+export function useClientDetails(clientId: string | null) {
+  return useQuery({
+    queryKey: ['client-details', clientId],
+    queryFn: async () => {
+      if (!clientId) return null;
+      const [profile, appointments] = await Promise.all([
+        supabase.from('profiles').select('*').eq('id', clientId).single(),
+        supabase.from('appointments')
+          .select('*, service:service_id(name), barber:barber_id(name)')
+          .eq('client_id', clientId)
+          .order('start_time', { ascending: false })
+      ]);
+
+      return {
+        profile: profile.data as Profile,
+        appointments: (appointments.data || []) as (Appointment & { service: { name: string }, barber: { name: string } })[],
+      };
+    },
+    enabled: !!clientId,
+  });
+}
+
+// ─── 8. Mutaciones ───────────────────────────────────────────────────────────
 export function useOwnerMutations() {
   const queryClient = useQueryClient();
 
@@ -205,11 +324,13 @@ export function useOwnerMutations() {
   });
 
   const createExpense = useMutation({
-    mutationFn: async (expense: { amount: number; description: string; category: string; expense_date: string; period: string }) => {
-      const { error } = await supabase.from('expenses').insert(expense);
+    mutationFn: async (expense: { amount: number; description: string; category: string; expense_date: string; period?: string }) => {
+      const period = expense.period || expense.expense_date.substring(0, 7); // yyyy-MM
+      const { error } = await supabase.from('expenses').insert({ ...expense, period });
       if (error) throw error;
+      return period;
     },
-    onSuccess: (_d, vars) => queryClient.invalidateQueries({ queryKey: ['owner-expenses', vars.period] }),
+    onSuccess: (period) => queryClient.invalidateQueries({ queryKey: ['owner-expenses', period] }),
   });
 
   const updateExpense = useMutation({
@@ -250,39 +371,31 @@ export function useOwnerMutations() {
    */
   const createSettlement = useMutation({
     mutationFn: async ({
-      barberId,
-      appointments,
-      commission,
-      ownerId,
+      barber_id,
+      total_gross,
+      barber_payment,
+      owner_payment,
       notes,
+      appointment_ids,
     }: {
-      barberId: string;
-      appointments: Appointment[];
-      commission: number;
-      ownerId: string;
+      barber_id: string;
+      total_gross: number;
+      barber_payment: number;
+      owner_payment: number;
       notes?: string;
+      appointment_ids: string[];
     }) => {
-      if (appointments.length === 0) throw new Error('No hay servicios pendientes de liquidar');
-
-      const totalRevenue = appointments.reduce((a, c) => a + Number(c.price), 0);
-      const barberEarnings = (totalRevenue * commission) / 100;
-      const ownerEarnings = totalRevenue - barberEarnings;
-
-      const startDate = appointments[appointments.length - 1].start_time; // más antigua
-      const endDate = appointments[0].start_time; // más reciente
+      if (appointment_ids.length === 0) throw new Error('No hay servicios seleccionados');
 
       // 1. Crear el settlement
       const { data: settlement, error: sError } = await supabase
         .from('settlements')
         .insert({
-          barber_id: barberId,
-          start_date: startDate,
-          end_date: endDate,
-          total_revenue: totalRevenue,
-          barber_earnings: barberEarnings,
-          owner_earnings: ownerEarnings,
-          commission_applied: commission,
-          settled_by: ownerId,
+          barber_id,
+          total_revenue: total_gross,
+          barber_earnings: barber_payment,
+          owner_earnings: owner_payment,
+          commission_applied: (barber_payment / total_gross) * 100,
           notes: notes
         })
         .select()
@@ -291,11 +404,10 @@ export function useOwnerMutations() {
       if (sError || !settlement) throw sError || new Error('Error creando liquidación');
 
       // 2. Marcar todas las citas con el settlement_id
-      const appointmentIds = appointments.map(a => a.id);
       const { error: aError } = await supabase
         .from('appointments')
         .update({ settlement_id: settlement.id })
-        .in('id', appointmentIds);
+        .in('id', appointment_ids);
 
       if (aError) throw aError;
 
@@ -325,5 +437,91 @@ export function useOwnerMutations() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['owner-base-data'] }),
   });
 
-  return { createService, deleteService, createExpense, updateExpense, deleteExpense, createCategory, deleteCategory, createSettlement, updateLoyalty };
+  const createPromotion = useMutation({
+    mutationFn: async (promo: Partial<Promotion>) => {
+      const { error } = await supabase.from('promotions').insert([promo]);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['owner-base-data'] }),
+  });
+
+  const updatePromotion = useMutation({
+    mutationFn: async ({ id, ...promo }: Partial<Promotion> & { id: string }) => {
+      const { error } = await supabase.from('promotions').update(promo).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['owner-base-data'] }),
+  });
+
+  const deletePromotion = useMutation({
+    mutationFn: async (id: string) => {
+      // First remove FK references in appointments to avoid constraint error
+      await supabase.from('appointments').update({ applied_promo_id: null }).eq('applied_promo_id', id);
+      const { error } = await supabase.from('promotions').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['owner-base-data'] }),
+  });
+
+  const deleteClient = useMutation({
+    mutationFn: async (clientId: string) => {
+      // 1. Anonimizar citas para no perder datos contables
+      const { error: updateAptError } = await supabase
+        .from('appointments')
+        .update({ 
+          client_id: null,
+          client_name: 'Usuario Eliminado (Privacidad)'
+        })
+        .eq('client_id', clientId);
+      
+      if (updateAptError) throw updateAptError;
+
+      // 2. Anonimizar el perfil (en lugar de borrarlo físicamente)
+      const { data, error: updateProfileError } = await supabase
+        .from('profiles')
+        .update({ 
+          name: 'Usuario Eliminado',
+          phone: '0000000000',
+          document_id: null,
+          address: null,
+          avatar_url: null,
+          nickname: null,
+          bio: null,
+          is_active: false
+        })
+        .eq('id', clientId)
+        .select();
+      
+      if (updateProfileError) throw updateProfileError;
+      if (!data || data.length === 0) {
+        throw new Error('No se pudo anonimizar el perfil. Verifica tus permisos de edición.');
+      }
+    },
+    onSuccess: () => {
+      toast.success('Cliente eliminado y datos anonimizados');
+      // Forzar un refetch inmediato
+      queryClient.refetchQueries({ queryKey: ['owner-clients'] });
+      queryClient.invalidateQueries({ queryKey: ['owner-stats'] });
+    },
+    onError: (err: Error) => {
+      console.error('Error al eliminar cliente:', err);
+      toast.error('No se pudo eliminar el cliente: ' + (err.message || 'Error desconocido'));
+    }
+  });
+
+  return { 
+    createService, 
+    deleteService, 
+    createExpense, 
+    updateExpense, 
+    deleteExpense, 
+    createCategory, 
+    deleteCategory, 
+    createSettlement, 
+    updateLoyalty,
+    deleteClient,
+    createPromotion,
+    updatePromotion,
+    deletePromotion
+  };
 }

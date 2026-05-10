@@ -17,17 +17,19 @@ export function middleware(req: NextRequest) {
   // Comprobamos la existencia de nuestra cookie de sesión personalizada
   const token = req.cookies.get('barbershop-auth')?.value;
   
-  const isProtectedRoute = req.nextUrl.pathname.startsWith('/dashboard') || req.nextUrl.pathname.startsWith('/barber/');
+  const isProtectedRoute = req.nextUrl.pathname.startsWith('/dashboard/owner') ||
+    req.nextUrl.pathname.startsWith('/dashboard/barber') ||
+    req.nextUrl.pathname.startsWith('/dashboard/client');
   const isAuthRoute = req.nextUrl.pathname === '/login' || req.nextUrl.pathname === '/register';
 
-  // Si intenta entrar a dashboard o reservas sin estar logueado, al login
+  // Si intenta entrar a rutas protegidas sin estar logueado, al login
   if (isProtectedRoute && !token) {
     return NextResponse.redirect(new URL('/login', req.url));
   }
 
-  // Si ya está logueado e intenta entrar a login o registro, al dashboard
+  // Si ya está logueado e intenta entrar a login o registro, mandarlo al inicio
   if (isAuthRoute && token) {
-    return NextResponse.redirect(new URL('/dashboard', req.url));
+    return NextResponse.redirect(new URL('/', req.url));
   }
 
   return NextResponse.next();
@@ -35,5 +37,12 @@ export function middleware(req: NextRequest) {
 
 // Configurar en qué rutas se ejecutará el middleware
 export const config = {
-  matcher: ['/dashboard/:path*', '/barber/:path*', '/login', '/register', '/api/:path*'],
+  matcher: [
+    '/dashboard/owner/:path*',
+    '/dashboard/barber/:path*',
+    '/dashboard/client/:path*',
+    '/login',
+    '/register',
+    '/api/:path*'
+  ],
 };
