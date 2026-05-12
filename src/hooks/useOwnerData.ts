@@ -455,7 +455,6 @@ export function useOwnerMutations() {
 
   const deletePromotion = useMutation({
     mutationFn: async (id: string) => {
-      // First remove FK references in appointments to avoid constraint error
       await supabase.from('appointments').update({ applied_promo_id: null }).eq('applied_promo_id', id);
       const { error } = await supabase.from('promotions').delete().eq('id', id);
       if (error) throw error;
@@ -463,49 +462,32 @@ export function useOwnerMutations() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['owner-base-data'] }),
   });
 
-  const deleteClient = useMutation({
-    mutationFn: async (clientId: string) => {
-      // 1. Anonimizar citas para no perder datos contables
-      const { error: updateAptError } = await supabase
-        .from('appointments')
-        .update({ 
-          client_id: null,
-          client_name: 'Usuario Eliminado (Privacidad)'
-        })
-        .eq('client_id', clientId);
-      
-      if (updateAptError) throw updateAptError;
+  const deleteUserStrict = useMutation({
+    mutationFn: async (userId: string) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('No se encontró una sesión administrativa activa');
 
-      // 2. Anonimizar el perfil (en lugar de borrarlo físicamente)
-      const { data, error: updateProfileError } = await supabase
-        .from('profiles')
-        .update({ 
-          name: 'Usuario Eliminado',
-          phone: '0000000000',
-          document_id: null,
-          address: null,
-          avatar_url: null,
-          nickname: null,
-          bio: null,
-          is_active: false
-        })
-        .eq('id', clientId)
-        .select();
-      
-      if (updateProfileError) throw updateProfileError;
-      if (!data || data.length === 0) {
-        throw new Error('No se pudo anonimizar el perfil. Verifica tus permisos de edición.');
+      const response = await fetch('/api/admin/delete-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, requesterToken: token })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error en el servidor al eliminar usuario');
       }
+      return userId;
     },
     onSuccess: () => {
-      toast.success('Cliente eliminado y datos anonimizados');
-      // Forzar un refetch inmediato
-      queryClient.refetchQueries({ queryKey: ['owner-clients'] });
+      toast.success('Cuenta eliminada permanentemente del sistema');
+      queryClient.invalidateQueries({ queryKey: ['owner-clients'] });
+      queryClient.invalidateQueries({ queryKey: ['owner-base-data'] });
       queryClient.invalidateQueries({ queryKey: ['owner-stats'] });
     },
     onError: (err: Error) => {
-      console.error('Error al eliminar cliente:', err);
-      toast.error('No se pudo eliminar el cliente: ' + (err.message || 'Error desconocido'));
+      toast.error('No se pudo eliminar: ' + err.message);
     }
   });
 
@@ -519,7 +501,8 @@ export function useOwnerMutations() {
     deleteCategory, 
     createSettlement, 
     updateLoyalty,
-    deleteClient,
+    deleteClient: deleteUserStrict,
+    deleteUserStrict,
     createPromotion,
     updatePromotion,
     deletePromotion

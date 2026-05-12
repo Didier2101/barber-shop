@@ -1,6 +1,6 @@
-/* eslint-disable @next/next/no-img-element */
 'use client';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Scissors, UserCircle, LogOut } from 'lucide-react';
 import { Profile } from '@/types';
 
@@ -12,12 +12,12 @@ interface BarberHeaderProps {
 
 export function BarberHeader({ userProfile, barberId, onLogout }: BarberHeaderProps) {
   return (
-    <header className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-black/80 backdrop-blur-md border-b border-white/5 flex items-center justify-between px-6 z-[60]">
-      <Link href={`/dashboard/barber/${barberId}`} className="flex items-center gap-2">
-        <div className="bg-[#f59e0b] p-1.5 rounded-lg">
-          <Scissors size={14} className="text-black" />
+    <header className="lg:hidden fixed top-0 left-0 right-0 h-20 bg-black/80 backdrop-blur-2xl border-b border-white/5 flex items-center justify-between px-6 z-[60]">
+      <Link href={`/dashboard/barber/${barberId}`} className="flex items-center gap-3">
+        <div className="bg-[#f59e0b]/10 border border-[#f59e0b]/20 p-2 rounded-xl">
+          <Scissors size={18} className="text-[#f59e0b]" />
         </div>
-        <span className="text-lg font-black tracking-tighter uppercase text-white">
+        <span className="text-xl font-black tracking-tighter uppercase text-white italic">
           B<span className="text-[#f59e0b]">S</span>
         </span>
       </Link>
@@ -25,17 +25,17 @@ export function BarberHeader({ userProfile, barberId, onLogout }: BarberHeaderPr
       <div className="flex items-center gap-4">
         <button 
           onClick={onLogout}
-          className="w-8 h-8 rounded-full border border-white/10 bg-white/5 flex items-center justify-center text-white/40 hover:text-red-500 transition-colors"
+          className="w-10 h-10 rounded-xl border border-white/10 bg-white/5 flex items-center justify-center text-white/20 hover:text-red-500 hover:bg-red-500/10 transition-all"
         >
-          <LogOut size={16} />
+          <LogOut size={18} />
         </button>
         <Link
           href={`/dashboard/barber/${barberId}/profile`}
-          className="w-8 h-8 rounded-full border border-white/10 bg-white/5 flex items-center justify-center overflow-hidden"
+          className="w-10 h-10 rounded-xl border border-white/10 bg-white/5 flex items-center justify-center overflow-hidden"
         >
           {userProfile.avatar_url
-            ? <img src={userProfile.avatar_url} alt={userProfile.name} className="w-full h-full object-cover" />
-            : <UserCircle size={20} className="text-white/40" />}
+            ? <Image src={userProfile.avatar_url} alt={userProfile.name} width={40} height={40} className="w-full h-full object-cover" />
+            : <UserCircle size={24} className="text-white/20" />}
         </Link>
       </div>
     </header>

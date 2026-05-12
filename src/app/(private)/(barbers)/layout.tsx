@@ -14,6 +14,7 @@ import {
   UserCircle
 } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import Swal from 'sweetalert2';
@@ -72,15 +73,8 @@ export default function BarberLayout({ children }: { children: React.ReactNode }
 
   return (
     <div className="flex h-screen bg-[#050505] text-white overflow-hidden">
-      {/* Background Photo - Hero Style */}
-      <div className="fixed inset-0 z-0">
-        {userProfile?.avatar_url ? (
-          <img src={userProfile.avatar_url} alt={`Fondo de perfil de ${userProfile.name}`} className="w-full h-full object-cover opacity-10" />
-        ) : (
-          <img src="/nathon-oski-EW_rqoSdDes-unsplash.jpg" alt="Fondo decorativo de la barbería" className="w-full h-full object-cover opacity-5" />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/95 to-[#050505]/60" />
-      </div>
+      {/* FONDO SÓLIDO PREMIUM */}
+      <div className="fixed inset-0 z-0 bg-[#050505]" />
 
       {/* DESKTOP SIDEBAR */}
       <aside 
@@ -149,7 +143,7 @@ export default function BarberLayout({ children }: { children: React.ReactNode }
       />
 
       {/* MAIN CONTENT AREA */}
-      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden relative z-10">
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden relative">
         <header className="hidden lg:flex h-20 bg-transparent items-center justify-between px-10 shrink-0 z-40">
           <div>
             <h1 className="text-xs font-black uppercase tracking-[0.3em] text-white/40">
@@ -162,7 +156,7 @@ export default function BarberLayout({ children }: { children: React.ReactNode }
           className="w-10 h-10 rounded-xl border border-white/10 bg-white/5 flex items-center justify-center overflow-hidden"
         >
           {userProfile.avatar_url
-            ? <img src={userProfile.avatar_url} alt={`Avatar de ${userProfile.name}`} className="w-full h-full object-cover" />
+            ? <Image src={userProfile.avatar_url} alt={`Avatar de ${userProfile.name}`} width={40} height={40} className="w-full h-full object-cover" />
             : <UserCircle size={24} className="text-white/40" />}
         </Link>
       </div>

@@ -7,7 +7,9 @@ import { Star, Zap } from 'lucide-react';
 import { Profile, Service, BusinessHour, Promotion, ShopSettings } from '@/types';
 import { toast } from 'sonner';
 import { useGlobalStore } from '@/store/useGlobalStore';
-import { format } from 'date-fns';
+import { useQueryClient } from '@tanstack/react-query';
+import { motion } from 'framer-motion';
+import { Scissors, ArrowLeft } from 'lucide-react';
 
 export default function BarberBookingPage() {
   const params = useParams();
@@ -16,6 +18,7 @@ export default function BarberBookingPage() {
   const searchParams = useSearchParams();
   const preSelectedPromoId = searchParams.get('promo_id');
   const currentUser = useGlobalStore(state => state.userProfile);
+  const queryClient = useQueryClient();
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('de-DE').format(price);
@@ -49,29 +52,37 @@ export default function BarberBookingPage() {
       setSelectedTime('');
       const { data: { session } } = await supabase.auth.getSession();
 
-      const { data: bData } = await supabase.from('profiles').select('*').eq('id', id).single();
-      if (bData) setBarber(bData);
+      // Carga paralela de datos para máxima velocidad
+      const [
+        profileRes,
+        servicesRes,
+        shopRes,
+        hoursRes,
+        ratingRes,
+        promoRes
+      ] = await Promise.all([
+        supabase.from('profiles').select('*').eq('id', id).single(),
+        supabase.from('services').select('*').eq('is_active', true),
+        supabase.from('shop_settings').select('*').eq('id', 1).single(),
+        supabase.from('business_hours').select('*'),
+        supabase.from('appointments').select('rating').eq('barber_id', id).eq('status', 'completed'),
+        preSelectedPromoId ? supabase.from('promotions').select('*').eq('id', preSelectedPromoId).single() : Promise.resolve({ data: null })
+      ]);
 
-      const { data: servs } = await supabase.from('services').select('*').eq('is_active', true);
-      if (servs) setServices(servs);
+      if (profileRes.data) setBarber(profileRes.data);
+      if (servicesRes.data) setServices(servicesRes.data);
+      if (shopRes.data) setShopSettings(shopRes.data);
+      if (hoursRes.data) setBusinessHours(hoursRes.data);
 
-      const { data: shopData } = await supabase.from('shop_settings').select('*').eq('id', 1).single();
-      if (shopData) setShopSettings(shopData);
-
-      const { data: bhData } = await supabase.from('business_hours').select('*');
-      if (bhData) setBusinessHours(bhData);
-
-      // Fetch rating
-      const { data: aptsRating } = await supabase.from('appointments').select('rating').eq('barber_id', id).eq('status', 'completed');
-      if (aptsRating && aptsRating.length > 0) {
-        const rated = aptsRating.filter(a => a.rating !== null);
+      if (ratingRes.data && ratingRes.data.length > 0) {
+        const rated = ratingRes.data.filter(a => a.rating !== null);
         if (rated.length > 0) {
           const avg = rated.reduce((acc, curr) => acc + Number(curr.rating), 0) / rated.length;
           setRating({ average: avg, count: rated.length });
         }
       }
 
-      // Loyalty & Promos Logic
+      // Loyalty Logic
       if (session?.user) {
         const { data: countData } = await supabase.from('appointments').select('id').eq('client_id', session.user.id).eq('status', 'completed');
         const completedCount = countData?.length || 0;
@@ -82,17 +93,10 @@ export default function BarberBookingPage() {
         }
       }
 
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      if (preSelectedPromoId) {
-        const { data: promo } = await supabase.from('promotions').select('*').eq('id', preSelectedPromoId).single();
-        if (promo && promo.is_active) {
-          // Extraer solo la parte YYYY-MM-DD para evitar errores de formato
-          const endDateStr = promo.end_date.split('T')[0];
-          if (new Date(endDateStr + 'T23:59:59') >= new Date()) {
-            setActivePromo(promo);
-          }
+      if (promoRes.data && promoRes.data.is_active) {
+        const endDateStr = promoRes.data.end_date.split('T')[0];
+        if (new Date(endDateStr + 'T23:59:59') >= new Date()) {
+          setActivePromo(promoRes.data);
         }
       }
 
@@ -258,6 +262,8 @@ export default function BarberBookingPage() {
     if (error) {
       toast.error(error.message);
     } else {
+      // Invalidar cache de React Query para que la lista se refresque al navegar
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
       toast.success('¡Reserva enviada! Esperando aprobación del barbero');
       router.push(`/dashboard/client/${currentUser?.id}/reservas`);
     }
@@ -270,152 +276,177 @@ export default function BarberBookingPage() {
   );
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-lg mx-auto">
-
-      {/* Barber Brief */}
-      <div className="flex items-center gap-4">
-        <div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-[#f59e0b]/30 bg-white/5">
-          {barber?.avatar_url && <img src={barber.avatar_url} alt={`Avatar de ${barber.nickname || barber.name}`} className="w-full h-full object-cover" />}
-        </div>
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <div className="flex text-[#f59e0b]">
-              {[1, 2, 3, 4, 5].map(star => (
-                <Star key={star} size={10} fill={star <= rating.average ? 'currentColor' : 'none'} className={star <= rating.average ? '' : 'text-white/10'} />
-              ))}
-            </div>
-            <span className="text-[8px] font-black uppercase text-white/40">{rating.count} reseñas</span>
+    <motion.div 
+      initial={{ x: '100%' }}
+      animate={{ x: 0 }}
+      exit={{ x: '100%' }}
+      transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+      className="fixed inset-0 z-[120] bg-black flex flex-col overflow-hidden"
+    >
+      {/* Header Fijo */}
+      <div className="shrink-0 h-20 border-b border-white/5 bg-black/60 backdrop-blur-xl flex items-center justify-between px-6 z-10">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-[#f59e0b]/10 text-[#f59e0b] flex items-center justify-center">
+            <Scissors size={20} />
           </div>
-          <h1 className="text-3xl font-black uppercase tracking-tighter leading-none text-white">{barber?.nickname || barber?.name}</h1>
-          <p className="text-[9px] font-black uppercase tracking-widest text-[#f59e0b]">Agendando Cita</p>
+          <div>
+            <h2 className="text-xl font-black text-white uppercase tracking-tighter italic leading-none">Reservar</h2>
+            <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em] mt-1">Paso 2: Detalles</p>
+          </div>
         </div>
+        <button 
+          onClick={() => router.back()} 
+          className="w-10 h-10 bg-white/5 text-white rounded-full flex items-center justify-center active:scale-90 transition-all"
+        >
+          <ArrowLeft size={20} />
+        </button>
       </div>
 
-      {/* Booking Card */}
-      <div className="bg-white/[0.03] backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-6 shadow-2xl space-y-10">
-        <form onSubmit={handleBooking} className="space-y-10">
-
-          {/* Active Promo Badge */}
-          {activePromo && (
-            <div className="bg-[#f59e0b]/10 border border-[#f59e0b]/30 rounded-2xl p-4 flex items-center justify-between animate-in zoom-in-95 duration-300">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-[#f59e0b] flex items-center justify-center text-black">
-                  <Zap size={14} />
-                </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-[#f59e0b]">Oferta Aplicada</p>
-                  <p className="text-[11px] font-black uppercase text-white">{activePromo.name}</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-[8px] font-black text-white/20 uppercase tracking-widest">Vence</p>
-                <p className="text-[10px] font-black text-white/60">{format(new Date(activePromo.end_date.split('T')[0] + 'T12:00:00'), 'dd MMM')}</p>
-              </div>
+      {/* Cuerpo Scrollable */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar p-4 lg:p-10 pb-32">
+        <div className="space-y-6 lg:space-y-8 max-w-lg mx-auto">
+          
+          {/* Barber Brief Compacto */}
+          <div className="flex items-center gap-4 lg:gap-5 px-1">
+            <div className="w-16 h-16 lg:w-24 lg:h-24 rounded-2xl lg:rounded-3xl overflow-hidden border-2 border-[#f59e0b]/30 bg-white/5 shrink-0 shadow-xl">
+              {barber?.avatar_url && <img src={barber.avatar_url} alt={`Avatar de ${barber.nickname || barber.name}`} className="w-full h-full object-cover" />}
             </div>
-          )}
-
-          <div className="space-y-4">
-            <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">1. Selecciona Servicios</h3>
-            <div className="grid gap-3">
-              {services.map(s => {
-                const isSelected = selectedServices.find(x => x.id === s.id);
-                const isAllowedByPromo = !activePromo?.service_ids || activePromo.service_ids.length === 0 || activePromo.service_ids.includes(s.id);
-
-                return (
-                  <div
-                    key={s.id}
-                    onClick={() => {
-                      if (activePromo) return; // Bloqueo total si hay promo
-                      toggleService(s);
-                    }}
-                    className={`p-4 rounded-2xl border transition-all active:scale-[0.98] 
-                      ${!isAllowedByPromo ? 'opacity-20 cursor-not-allowed' : 'cursor-pointer'} 
-                      ${isSelected ? 'bg-[#f59e0b] border-[#f59e0b]' : 'bg-white/5 border-white/5'} 
-                      ${activePromo ? 'pointer-events-none' : ''}`}
-                  >
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className={`font-black uppercase text-xs ${isSelected ? 'text-black' : 'text-white'}`}>{s.name}</p>
-                        <p className={`text-[9px] font-bold ${isSelected ? 'text-black/60' : 'text-zinc-500'}`}>{s.duration} min</p>
-                      </div>
-                      <p className={`font-black italic ${isSelected ? 'text-black' : 'text-[#f59e0b]'}`}>${formatPrice(s.price)}</p>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-
-
-          {selectedServices.length > 0 && (
-            <div className="space-y-4 animate-in fade-in duration-500">
-              <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">2. Elige la Fecha</h3>
-              <input
-                type="date"
-                className={`w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm font-black uppercase tracking-widest outline-none focus:border-[#f59e0b] text-white ${activePromo && activePromo.start_date.split('T')[0] === activePromo.end_date.split('T')[0] ? 'opacity-50' : ''}`}
-                value={selectedDate}
-                onChange={e => setSelectedDate(e.target.value)}
-                min={activePromo ? activePromo.start_date.split('T')[0] : new Date().toISOString().split('T')[0]}
-                max={activePromo ? activePromo.end_date.split('T')[0] : undefined}
-                disabled={!!(activePromo && activePromo.start_date.split('T')[0] === activePromo.end_date.split('T')[0])}
-                required
-              />
-              {activePromo && activePromo.start_date.split('T')[0] === activePromo.end_date.split('T')[0] && (
-                <p className="text-[8px] font-bold text-[#f59e0b] uppercase tracking-widest ml-1">Fecha fija por promoción</p>
-              )}
-            </div>
-          )}
-
-          {selectedDate && (
-            <div className="space-y-4 animate-in fade-in duration-500">
-              <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">3. Selecciona el Horario</h3>
-              {fetchingSlots ? (
-                <p className="text-[10px] font-black uppercase tracking-widest text-center py-4 animate-pulse text-white/40">Buscando espacios...</p>
-              ) : selectedServices.length === 0 ? (
-                <p className="text-[10px] text-amber-500 font-black uppercase text-center py-4 bg-amber-500/5 rounded-2xl border border-amber-500/10">No hay servicios seleccionados para esta oferta</p>
-              ) : availableSlots.length === 0 ? (
-                <div className="py-8 px-6 bg-red-500/5 rounded-[2rem] border border-red-500/10 text-center space-y-2">
-                  <p className="text-[10px] text-red-500 font-black uppercase tracking-widest">No hay turnos disponibles</p>
-                  <p className="text-[8px] text-red-500/50 font-bold uppercase tracking-widest">El barbero podría estar cerrado o sin agenda este día ({format(new Date(selectedDate + 'T12:00:00'), 'EEEE')})</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-4 gap-2">
-                  {availableSlots.map(time => (
-                    <button
-                      key={time}
-                      type="button"
-                      onClick={() => setSelectedTime(time)}
-                      className={`py-3 rounded-xl text-[10px] font-black transition-all ${selectedTime === time ? 'bg-white text-black shadow-xl' : 'bg-white/5 text-zinc-500'}`}
-                    >
-                      {time}
-                    </button>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <div className="flex text-[#f59e0b]">
+                  {[1, 2, 3, 4, 5].map(star => (
+                    <Star key={star} size={10} fill={star <= rating.average ? 'currentColor' : 'none'} className={star <= rating.average ? '' : 'text-white/10'} />
                   ))}
                 </div>
-              )}
+                <span className="text-[8px] font-black uppercase text-white/20">{rating.count} reseñas</span>
+              </div>
+              <h1 className="text-2xl lg:text-4xl font-black uppercase tracking-tighter leading-none text-white italic">{barber?.nickname || barber?.name}</h1>
+              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[#f59e0b]">Profesional Senior</p>
             </div>
-          )}
+          </div>
 
-          <div className="pt-6 border-t border-white/10 space-y-6">
-            <div className="flex justify-between items-end">
-              <div className="space-y-1">
-                <p className="text-[9px] font-black uppercase tracking-widest text-zinc-500">Total Estimado</p>
-                <div className="flex items-baseline gap-3">
-                  <p className="text-3xl font-black italic text-[#f59e0b] leading-none">${formatPrice(discountedPrice)}</p>
+          {/* Booking Card Compacta */}
+          <div className="bg-white/[0.03] backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-5 lg:p-8 shadow-2xl space-y-8 lg:space-y-10">
+            <form onSubmit={handleBooking} className="space-y-8 lg:space-y-10">
+
+              {/* Active Promo Badge */}
+              {activePromo && (
+                <div className="bg-[#f59e0b]/10 border border-[#f59e0b]/30 rounded-[1.5rem] p-4 flex items-center justify-between animate-in zoom-in-95 duration-300">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-[#f59e0b] flex items-center justify-center text-black shadow-lg">
+                      <Zap size={14} />
+                    </div>
+                    <div>
+                      <p className="text-[8px] font-black uppercase tracking-[0.3em] text-[#f59e0b]">Promo Activada</p>
+                      <p className="text-[11px] font-black uppercase text-white tracking-tight">{activePromo.name}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-4">
+                <h3 className="text-[9px] lg:text-[11px] font-black uppercase tracking-[0.4em] text-white/30 ml-2">1. Los Servicios</h3>
+                <div className="grid gap-3">
+                  {services.map(s => {
+                    const isSelected = selectedServices.find(x => x.id === s.id);
+                    const isAllowedByPromo = !activePromo?.service_ids || activePromo.service_ids.length === 0 || activePromo.service_ids.includes(s.id);
+
+                    return (
+                      <div
+                        key={s.id}
+                        onClick={() => {
+                          if (activePromo) return; 
+                          toggleService(s);
+                        }}
+                        className={`p-4 lg:p-6 rounded-[1.5rem] lg:rounded-[2rem] border transition-all active:scale-[0.98] 
+                          ${!isAllowedByPromo ? 'opacity-20 cursor-not-allowed' : 'cursor-pointer'} 
+                          ${isSelected ? 'bg-[#f59e0b] border-[#f59e0b] shadow-lg shadow-amber-500/10' : 'bg-white/5 border-white/5 hover:bg-white/10'} 
+                          ${activePromo ? 'pointer-events-none' : ''}`}
+                      >
+                        <div className="flex justify-between items-center">
+                          <div className="space-y-0.5">
+                            <p className={`font-black uppercase text-[11px] lg:text-[13px] tracking-tight ${isSelected ? 'text-black' : 'text-white'}`}>{s.name}</p>
+                            <p className={`text-[9px] font-bold ${isSelected ? 'text-black/60' : 'text-white/30'}`}>{s.duration} min</p>
+                          </div>
+                          <p className={`text-base lg:text-lg font-black italic ${isSelected ? 'text-black' : 'text-[#f59e0b]'}`}>${formatPrice(Number(s.price))}</p>
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
-              <p className="text-[10px] font-black text-zinc-500">{totalDuration} min</p>
-            </div>
 
-            <button
-              type="submit"
-              disabled={!selectedTime || selectedServices.length === 0}
-              className="w-full bg-white text-black py-5 rounded-[2rem] font-black uppercase tracking-widest text-xs transition-all shadow-2xl active:scale-95 disabled:opacity-20"
-            >
-              Confirmar Reserva
-            </button>
+              {selectedServices.length > 0 && (
+                <div className="space-y-4 animate-in fade-in duration-500">
+                  <h3 className="text-[9px] lg:text-[11px] font-black uppercase tracking-[0.4em] text-white/30 ml-2">2. El Día</h3>
+                  <input
+                    type="date"
+                    className={`w-full bg-white/5 border border-white/10 rounded-xl p-4 text-[11px] font-black uppercase tracking-widest outline-none focus:border-[#f59e0b] text-white transition-all ${activePromo && activePromo.start_date.split('T')[0] === activePromo.end_date.split('T')[0] ? 'opacity-50' : 'focus:bg-white/10'}`}
+                    value={selectedDate}
+                    onChange={e => setSelectedDate(e.target.value)}
+                    min={activePromo ? activePromo.start_date.split('T')[0] : new Date().toISOString().split('T')[0]}
+                    max={activePromo ? activePromo.end_date.split('T')[0] : undefined}
+                    disabled={!!(activePromo && activePromo.start_date.split('T')[0] === activePromo.end_date.split('T')[0])}
+                    required
+                  />
+                </div>
+              )}
+
+              {selectedDate && (
+                <div className="space-y-4 animate-in fade-in duration-500">
+                  <h3 className="text-[9px] lg:text-[11px] font-black uppercase tracking-[0.4em] text-white/30 ml-2">3. Tu Turno</h3>
+                  {fetchingSlots ? (
+                    <div className="flex flex-col items-center py-6 gap-2">
+                       <div className="w-6 h-6 border-2 border-[#f59e0b] border-t-transparent rounded-full animate-spin" />
+                       <p className="text-[8px] font-black uppercase tracking-widest text-white/20">Buscando...</p>
+                    </div>
+                  ) : availableSlots.length === 0 ? (
+                    <div className="py-8 px-5 bg-red-500/5 rounded-[2rem] border border-red-500/10 text-center space-y-2">
+                      <p className="text-[10px] text-red-500 font-black uppercase tracking-widest">Sin disponibilidad</p>
+                      <p className="text-[8px] text-red-500/50 font-bold uppercase tracking-widest leading-relaxed">Prueba con otra fecha o barbero.</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-4 gap-2">
+                      {availableSlots.map(time => (
+                        <button
+                          key={time}
+                          type="button"
+                          onClick={() => setSelectedTime(time)}
+                          className={`py-3 rounded-xl text-[10px] font-black transition-all active:scale-90 ${selectedTime === time ? 'bg-white text-black shadow-lg' : 'bg-white/5 text-white/30 hover:bg-white/10'}`}
+                        >
+                          {time}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="pt-6 lg:pt-10 border-t border-white/5 space-y-6 lg:space-y-8">
+                <div className="flex justify-between items-end px-1">
+                  <div className="space-y-1">
+                    <p className="text-[9px] font-black uppercase tracking-[0.3em] text-white/30">Total a Pagar</p>
+                    <div className="flex items-baseline gap-2">
+                      <p className="text-3xl lg:text-4xl font-black italic text-[#f59e0b] leading-none tracking-tighter">${formatPrice(discountedPrice)}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                     <p className="text-[9px] font-black text-white/20 uppercase tracking-widest">{totalDuration} min</p>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={!selectedTime || selectedServices.length === 0}
+                  className="w-full bg-[#f59e0b] text-black py-5 rounded-[2rem] font-black uppercase tracking-[0.4em] text-[11px] transition-all shadow-xl shadow-amber-500/10 active:scale-95 disabled:opacity-10"
+                >
+                  Confirmar Mi Cita
+                </button>
+              </div>
+            </form>
           </div>
-        </form>
+        </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

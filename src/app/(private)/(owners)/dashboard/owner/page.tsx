@@ -4,11 +4,12 @@ import {
   LayoutDashboard, 
   TrendingUp, 
   Activity, 
-  Check, 
   TrendingDown, 
-  Sparkles 
+  Sparkles,
+  Briefcase
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { motion } from 'framer-motion';
 
 export default function OwnerDashboardPage() {
   const { isLoading: baseLoading } = useOwnerBaseData();
@@ -28,101 +29,111 @@ export default function OwnerDashboardPage() {
   if (baseLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="w-8 h-8 border-4 border-[#0061ff] border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-8 h-8 border-4 border-[#f59e0b]/20 border-t-[#f59e0b] rounded-full animate-spin"></div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex items-center gap-4">
-        <div className="p-3 bg-white border border-gray-100 rounded-lg shadow-sm">
-          <LayoutDashboard size={24} className="text-[#0061ff]" />
+    <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-6xl mx-auto pb-32">
+      {/* HEADER SERIO */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div className="flex items-center gap-5">
+          <div className="p-4 bg-black/80 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-xl">
+            <LayoutDashboard size={28} className="text-[#f59e0b]" />
+          </div>
+          <div>
+            <p className="text-[#f59e0b] text-[10px] font-black uppercase tracking-[0.4em] mb-1">Visión General</p>
+            <h2 className="text-4xl font-black tracking-tighter text-white uppercase italic leading-none">Inicio de Cuenta</h2>
+          </div>
         </div>
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight text-gray-900 uppercase">Inicio de la cuenta</h2>
-          <p className="text-[11px] text-gray-500 font-medium tracking-wider">Visión general del estado actual de tu negocio</p>
+        <div className="bg-black/40 border border-white/5 px-6 py-3 rounded-2xl">
+          <p className="text-[9px] font-black uppercase tracking-widest text-white/20">Estado del Negocio</p>
+          <p className="text-sm font-black text-[#f59e0b] uppercase tracking-tighter italic">Operativo • {format(new Date(), 'dd MMM yyyy')}</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-        <div className="bg-white border border-gray-100 rounded-3xl p-8 shadow-sm group hover:border-[#0061ff]/20 transition-all">
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">Ventas Brutas</p>
-          <p className="text-3xl font-black text-gray-900 leading-none group-hover:text-[#0061ff] transition-colors">${new Intl.NumberFormat('de-DE').format(stats.grossIncome)}</p>
-          <div className="mt-8 pt-6 border-t border-gray-50 flex items-center gap-2">
-            <TrendingUp size={14} className="text-emerald-500" />
-            <span className="text-[10px] text-emerald-600 font-black tracking-widest uppercase">Facturación Total</span>
+      {/* MÉTRICAS DE PRECISIÓN (ESTILO TICKER) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 flex flex-col lg:flex-row -space-y-px lg:-space-y-0 lg:-space-x-px">
+        {[
+          { label: 'Ventas Brutas', value: stats.grossIncome, icon: TrendingUp, color: 'text-white', sub: 'Facturación Total' },
+          { label: 'En Caja (Pendiente)', value: stats.pendingOwnerIncome, icon: Activity, color: 'text-[#f59e0b]', sub: 'Por Liquidar' },
+          { label: 'Gastos del Mes', value: stats.expense, icon: TrendingDown, color: 'text-red-500', sub: 'Salida de Capital' },
+          { label: 'Utilidad Neta', value: stats.profit, icon: Sparkles, color: 'text-emerald-500', sub: 'Beneficio Final' }
+        ].map((item, idx, arr) => (
+          <div 
+            key={item.label}
+            className={`
+              bg-black/80 border border-white/10 p-6 md:p-8 flex flex-col justify-between transition-all group hover:bg-black/90
+              ${idx === 0 ? 'rounded-t-[2.5rem] lg:rounded-tr-none lg:rounded-l-[2.5rem]' : ''}
+              ${idx === arr.length - 1 ? 'rounded-b-[2.5rem] lg:rounded-bl-none lg:rounded-r-[2.5rem]' : ''}
+            `}
+          >
+            <div className="flex justify-between items-start mb-6">
+              <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.2em]">{item.label}</p>
+              <item.icon size={16} className={`${item.color} opacity-40 group-hover:opacity-100 transition-all`} />
+            </div>
+            <div className="space-y-1">
+              <p className={`text-3xl md:text-4xl font-black italic tracking-tighter leading-none ${item.color}`}>
+                ${new Intl.NumberFormat('de-DE').format(item.value)}
+              </p>
+              <p className="text-[8px] font-black uppercase tracking-widest text-white/10">{item.sub}</p>
+            </div>
           </div>
-        </div>
-
-        <div className="bg-white border border-gray-100 rounded-3xl p-8 shadow-sm group hover:border-[#0061ff]/20 transition-all">
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">En Caja (Pendiente)</p>
-          <p className="text-3xl font-black text-gray-900 leading-none group-hover:text-[#0061ff] transition-colors">${new Intl.NumberFormat('de-DE').format(stats.pendingOwnerIncome)}</p>
-          <div className="mt-8 pt-6 border-t border-gray-50 flex items-center gap-2">
-            <Activity size={14} className="text-[#0061ff]" />
-            <span className="text-[10px] text-[#0061ff] font-black tracking-widest uppercase">Por Liquidar</span>
-          </div>
-        </div>
-
-        <div className="bg-white border border-gray-100 rounded-3xl p-8 shadow-sm group hover:border-[#0061ff]/20 transition-all">
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">Ganancia Neta</p>
-          <p className="text-3xl font-black text-gray-900 leading-none group-hover:text-[#0061ff] transition-colors">${new Intl.NumberFormat('de-DE').format(stats.ownerIncome)}</p>
-          <div className="mt-8 pt-6 border-t border-gray-50 flex items-center gap-2">
-            <Check size={14} className="text-emerald-500" />
-            <span className="text-[10px] text-emerald-600 font-black tracking-widest uppercase">Post-Comisiones</span>
-          </div>
-        </div>
-
-        <div className="bg-white border border-gray-100 rounded-3xl p-8 shadow-sm group hover:border-[#0061ff]/20 transition-all">
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">Gastos del Mes</p>
-          <p className="text-3xl font-black text-gray-900 leading-none group-hover:text-[#0061ff] transition-colors">${new Intl.NumberFormat('de-DE').format(stats.expense)}</p>
-          <div className="mt-8 pt-6 border-t border-gray-50 flex items-center gap-2">
-            <TrendingDown size={14} className="text-red-500" />
-            <span className="text-[10px] text-red-600 font-black tracking-widest uppercase">Salida de Capital</span>
-          </div>
-        </div>
-
-        <div className="bg-white border border-gray-100 rounded-3xl p-8 shadow-sm group hover:border-[#0061ff]/20 transition-all">
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">Utilidad Final</p>
-          <p className="text-3xl font-black text-gray-900 leading-none group-hover:text-[#0061ff] transition-colors">${new Intl.NumberFormat('de-DE').format(stats.profit)}</p>
-          <div className="mt-8 pt-6 border-t border-gray-50 flex items-center gap-2">
-            <Sparkles size={14} className="text-blue-400" />
-            <span className="text-[10px] text-blue-500 font-black tracking-widest uppercase">Beneficio Neto</span>
-          </div>
-        </div>
+        ))}
       </div>
 
+      {/* MONITOR DE ACTIVIDAD (AGENDA) */}
       <div className="space-y-6">
-        <h3 className="text-sm font-bold text-gray-900 uppercase tracking-[0.2em] px-2">Agenda del Día <span className="text-gray-400 ml-4 text-[10px] font-normal italic">({todayApts.length} servicios registrados)</span></h3>
-        <div className="grid gap-4">
+        <div className="flex items-center justify-between px-4">
+          <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-[#f59e0b] flex items-center gap-3">
+            <Briefcase size={16} /> Agenda de Operaciones
+          </h3>
+          <span className="text-[8px] font-black text-white/20 uppercase tracking-widest italic">{todayApts.length} Servicios registrados hoy</span>
+        </div>
+        
+        <div className="flex flex-col -space-y-px">
           {todayApts.length === 0 ? (
-            <div className="py-24 text-center border border-dashed border-gray-200 rounded-[2rem] bg-gray-50/30">
-              <p className="text-gray-400 font-bold text-[11px] tracking-[0.2em] uppercase">No hay actividad registrada para hoy</p>
+            <div className="py-24 text-center border-2 border-dashed border-white/5 rounded-[3rem] opacity-30 flex flex-col items-center justify-center gap-4">
+              <Activity size={40} className="text-white/20" />
+              <p className="text-[9px] font-black uppercase tracking-[0.3em]">Sin actividad registrada hoy</p>
             </div>
           ) : (
-            todayApts.map(apt => (
-              <div key={apt.id} className="flex items-center justify-between p-8 bg-white border border-gray-100 rounded-[2rem] hover:border-[#0061ff]/30 hover:shadow-xl hover:shadow-blue-500/5 transition-all group cursor-default">
-                <div className="flex items-center gap-8">
-                  <div className="bg-blue-50/50 border border-blue-100/50 px-6 py-4 rounded-2xl text-center min-w-[100px] group-hover:bg-[#0061ff] group-hover:text-white transition-colors">
-                    <p className="text-[#0061ff] group-hover:text-white text-lg font-black tracking-tight">{format(new Date(apt.start_time), 'HH:mm')}</p>
+            todayApts.map((apt, idx) => (
+              <motion.div 
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: idx * 0.05 }}
+                key={apt.id} 
+                className={`
+                  bg-black/80 border border-white/10 p-5 md:p-6 flex flex-col md:flex-row justify-between items-center gap-4 transition-all group relative z-10 hover:z-20
+                  ${idx === 0 ? 'rounded-t-[2rem]' : ''}
+                  ${idx === todayApts.length - 1 ? 'rounded-b-[2rem]' : ''}
+                `}
+              >
+                <div className="flex items-center gap-6 w-full md:w-auto">
+                  <div className="bg-white/5 border border-white/10 px-4 py-2.5 rounded-xl text-center min-w-[70px] group-hover:bg-[#f59e0b] group-hover:text-black transition-all">
+                    <p className="text-lg font-black italic tracking-tighter leading-none">{format(new Date(apt.start_time), 'HH:mm')}</p>
                   </div>
-                  <div>
-                    <p className="text-xl font-black text-gray-900 mb-1 uppercase tracking-tight">{apt.client?.name || apt.client_name}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm md:text-lg font-black text-white uppercase tracking-tight italic truncate leading-none mb-1.5">{apt.client?.name || apt.client_name}</p>
                     <div className="flex items-center gap-2">
-                       <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Barbero:</span>
-                       <span className="text-[10px] text-[#0061ff] font-black uppercase tracking-widest">{apt.barber?.name}</span>
+                       <span className="text-[8px] text-white/20 font-black uppercase tracking-widest">Atendido por:</span>
+                       <span className="text-[8px] text-[#f59e0b] font-black uppercase tracking-widest italic">{apt.barber?.name}</span>
                     </div>
                   </div>
                 </div>
-                <div className="text-right flex flex-col items-end gap-2">
-                  <p className="text-2xl font-black text-gray-900">${new Intl.NumberFormat('de-DE').format(apt.price)}</p>
-                  <span className={`text-[9px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest ${apt.status === 'completed' ? 'text-emerald-600 bg-emerald-50 border border-emerald-100' : 'text-blue-600 bg-blue-50 border border-blue-100'}`}>
-                    {apt.status === 'completed' ? 'Completado' : 'En espera'}
+                <div className="flex items-center justify-between md:justify-end gap-6 w-full md:w-auto border-t md:border-t-0 border-white/5 pt-3 md:pt-0">
+                  <div className="text-right">
+                    <p className="text-xl font-black italic text-white tracking-tighter leading-none">${new Intl.NumberFormat('de-DE').format(apt.price)}</p>
+                  </div>
+                  <span className={`text-[7px] font-black px-3 py-1 rounded-md uppercase tracking-widest ${apt.status === 'completed' ? 'text-emerald-500 bg-emerald-500/10 border border-emerald-500/20' : 'text-[#f59e0b] bg-[#f59e0b]/10 border border-[#f59e0b]/20'}`}>
+                    {apt.status === 'completed' ? 'Liquidado' : 'Pendiente'}
                   </span>
                 </div>
-              </div>
-            ))
-          )}
+              </motion.div>
+            )
+          ))}
         </div>
       </div>
     </div>

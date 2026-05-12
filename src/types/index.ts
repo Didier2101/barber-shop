@@ -54,6 +54,8 @@ export interface Appointment {
   /** null = pendiente de liquidar al barbero | con valor = ya liquidada */
   settlement_id?: string | null;
   is_loyalty_reward?: boolean;
+  applied_promo_id?: string | null;
+  notes?: string | null;
 }
 
 export interface BusinessHour {

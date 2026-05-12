@@ -11,6 +11,7 @@ import {
   Home
 } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import Swal from 'sweetalert2';
@@ -69,15 +70,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   return (
     <div className="flex h-[100dvh] bg-[#050505] text-white overflow-hidden">
 
-      {/* ── FONDO ──────────────────────────────────────── */}
-      <div className="fixed inset-0 z-0 pointer-events-none">
-        <img
-          src={userProfile.avatar_url || '/nathon-oski-EW_rqoSdDes-unsplash.jpg'}
-          alt={`Fondo de perfil de ${userProfile.name}`}
-          className="w-full h-full object-cover opacity-10"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/90 to-[#050505]/50" />
-      </div>
+      {/* FONDO SÓLIDO PREMIUM */}
+      <div className="fixed inset-0 z-0 bg-[#050505]" />
 
       {/* ── SIDEBAR DESKTOP ────────────────────────────── */}
       <aside className={`hidden lg:flex flex-col h-full border-r border-white/5 bg-black/40 backdrop-blur-xl z-50 transition-all duration-300 relative shrink-0 ${isCollapsed ? 'w-[72px]' : 'w-72'}`}>
@@ -145,40 +139,40 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       </aside>
 
       {/* ── COLUMNA PRINCIPAL ──────────────────────────── */}
-      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden relative z-10">
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden relative">
 
         {/* ── TOP BAR MOBILE ─────────────────────────── */}
-        <header className="lg:hidden flex items-center justify-between px-5 h-16 bg-black/60 backdrop-blur-md border-b border-white/5 shrink-0 z-40">
+        <header className="lg:hidden flex items-center justify-between px-6 h-20 bg-black/80 backdrop-blur-2xl border-b border-white/5 shrink-0 z-40 relative">
           {/* Logo */}
-          <Link href={`/dashboard/client/${clientId}`} className="flex items-center gap-2.5">
-            <div className="bg-[#f59e0b] p-1.5 rounded-lg">
-              <Scissors size={14} className="text-black" />
+          <Link href={`/dashboard/client/${clientId}`} className="flex items-center gap-3">
+            <div className="bg-[#f59e0b]/10 border border-[#f59e0b]/20 p-2 rounded-xl">
+              <Scissors size={18} className="text-[#f59e0b]" />
             </div>
-            <span className="text-base font-black tracking-tighter uppercase text-white">
+            <span className="text-xl font-black tracking-tighter uppercase text-white italic">
               B<span className="text-[#f59e0b]">S</span>
             </span>
           </Link>
 
           {/* Page title */}
-          <span className="text-[10px] font-black uppercase tracking-widest text-white/40 absolute left-1/2 -translate-x-1/2">
+          <span className="text-[10px] font-black uppercase tracking-[0.4em] text-white/20 absolute left-1/2 -translate-x-1/2 italic">
             {activeTab?.label || 'Mi Espacio'}
           </span>
 
           {/* Avatar */}
-          <Link href={`/dashboard/client/${clientId}/profile`} className="w-9 h-9 rounded-full border-2 border-[#f59e0b]/40 overflow-hidden bg-white/5 flex items-center justify-center shrink-0">
+          <Link href={`/dashboard/client/${clientId}/profile`} className="w-10 h-10 rounded-xl border border-[#f59e0b]/20 overflow-hidden bg-black flex items-center justify-center shrink-0">
             {userProfile.avatar_url
-              ? <img src={userProfile.avatar_url} alt={`Avatar de ${userProfile.name}`} className="w-full h-full object-cover" />
-              : <span className="text-xs font-black text-[#f59e0b]">{userProfile.name?.charAt(0)}</span>}
+              ? <Image src={userProfile.avatar_url} alt={`Avatar de ${userProfile.name}`} width={40} height={40} className="w-full h-full object-cover" />
+              : <span className="text-xs font-black text-[#f59e0b] italic">{userProfile.name?.charAt(0)}</span>}
           </Link>
         </header>
 
         {/* ── TOP BAR DESKTOP ────────────────────────── */}
-        <header className="hidden lg:flex h-16 bg-transparent items-center justify-between px-10 shrink-0 z-40">
-          <h1 className="text-xs font-black uppercase tracking-[0.3em] text-white/30">
+        <header className="hidden lg:flex h-20 bg-transparent items-center justify-between px-10 shrink-0 z-40">
+          <h1 className="text-xs font-black uppercase tracking-[0.4em] text-white/20 italic">
             {activeTab?.label || 'Mi Espacio'}
           </h1>
-          <div className="flex items-center gap-3 px-4 py-2 bg-white/5 rounded-2xl border border-white/5">
-            <div className="w-7 h-7 rounded-lg bg-[#f59e0b] flex items-center justify-center text-black font-black text-[10px]">
+          <div className="flex items-center gap-4 px-5 py-2.5 bg-white/5 rounded-2xl border border-white/5">
+            <div className="w-8 h-8 rounded-xl bg-[#f59e0b]/10 border border-[#f59e0b]/20 flex items-center justify-center text-[#f59e0b] font-black text-[10px] italic">
               {userProfile.name?.charAt(0)}
             </div>
             <span className="text-[10px] font-black uppercase tracking-widest text-white">

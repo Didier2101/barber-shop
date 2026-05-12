@@ -12,7 +12,7 @@ export function useBarberAgenda(barberId: string, dateStr?: string) {
       // 1. Cargar pendientes de aprobación
       const { data: pending } = await supabase
         .from('appointments')
-        .select(`*, client:client_id(name)`)
+        .select(`*, client:client_id(name, phone)`)
         .eq('barber_id', barberId)
         .eq('status', 'pending')
         .order('start_time', { ascending: true });
@@ -24,7 +24,7 @@ export function useBarberAgenda(barberId: string, dateStr?: string) {
       
       const { data: today } = await supabase
         .from('appointments')
-        .select(`*, client:client_id(name)`)
+        .select(`*, client:client_id(name, phone)`)
         .eq('barber_id', barberId)
         .neq('status', 'pending')
         .gte('start_time', start.toISOString())
@@ -35,7 +35,7 @@ export function useBarberAgenda(barberId: string, dateStr?: string) {
       // Solo si no estamos filtrando por un día específico muy lejano
       const { data: upcoming } = await supabase
         .from('appointments')
-        .select(`*, client:client_id(name)`)
+        .select(`*, client:client_id(name, phone)`)
         .eq('barber_id', barberId)
         .neq('status', 'pending')
         .neq('status', 'cancelled')
@@ -49,6 +49,8 @@ export function useBarberAgenda(barberId: string, dateStr?: string) {
       };
     },
     enabled: !!barberId,
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 30,
   });
 }
 
@@ -79,6 +81,8 @@ export function useBarberStats(barberId: string, filter: 'today' | 'custom', ran
       return { income, serviceCount: count };
     },
     enabled: !!barberId,
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 30,
   });
 }
 
@@ -95,6 +99,8 @@ export function useBarberSocials(barberId: string) {
       return data as BarberSocial[];
     },
     enabled: !!barberId,
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 30,
   });
 }
 
@@ -108,6 +114,7 @@ export function useBarberClients(barberId: string) {
         .select(`*, client:client_id(name, phone, avatar_url)`)
         .eq('barber_id', barberId)
         .eq('status', 'completed')
+        .not('client_id', 'is', null) // Solo clientes con cuenta real
         .order('start_time', { ascending: false });
 
       if (!apts) return [];
@@ -117,6 +124,7 @@ export function useBarberClients(barberId: string) {
         name: string;
         lastService: string;
         totalSpent: number;
+        servicesCount: number;
         avatar?: string;
       }
       const uniqueClients: BarberClient[] = [];
@@ -131,16 +139,20 @@ export function useBarberClients(barberId: string) {
             name: apt.client?.name || apt.client_name || 'Desconocido',
             lastService: apt.start_time,
             totalSpent: Number(apt.price),
+            servicesCount: 1,
             avatar: apt.client?.avatar_url
           });
         } else {
           const idx = uniqueClients.findIndex(c => c.id === clientId);
           uniqueClients[idx].totalSpent += Number(apt.price);
+          uniqueClients[idx].servicesCount += 1;
         }
       });
       return uniqueClients;
     },
     enabled: !!barberId,
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 30,
   });
 }
 
@@ -148,8 +160,11 @@ export function useBarberClients(barberId: string) {
 export function useUpdateAppointmentStatus() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, status, barberId }: { id: string, status: string, barberId: string }) => {
-      const { error } = await supabase.from('appointments').update({ status }).eq('id', id);
+    mutationFn: async ({ id, status, barberId, notes }: { id: string, status: string, barberId: string, notes?: string }) => {
+      const updateData: { status: string; notes?: string } = { status };
+      if (notes) updateData.notes = notes;
+      
+      const { error } = await supabase.from('appointments').update(updateData).eq('id', id);
       if (error) throw error;
       if (status === 'completed') {
         await supabase.rpc('increment_services_completed', { target_id: barberId });
@@ -191,5 +206,7 @@ export function useBarberFinance(barberId: string) {
       };
     },
     enabled: !!barberId,
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 30,
   });
 }
