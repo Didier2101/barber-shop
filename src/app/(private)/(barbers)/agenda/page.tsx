@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { useBarberAgenda, useUpdateAppointmentStatus } from '@/hooks/useBarberData';
+import { useBarberAgenda, useUpdateAppointmentStatus } from '@/hooks/barber';
 import { 
   Calendar, 
   Clock, 

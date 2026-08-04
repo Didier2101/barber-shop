@@ -34,7 +34,6 @@ export function FullProfileView({ profileId }: FullProfileViewProps) {
       const { data: { session } } = await supabase.auth.getSession();
       setCurrentUser(session?.user ?? null);
 
-      // Carga paralela de datos para mejorar rendimiento
       const [profileRes, appointmentsRes] = await Promise.all([
         supabase.from('profiles').select('*').eq('id', profileId).single(),
         supabase.from('appointments').select('rating').eq('barber_id', profileId).eq('status', 'completed')
@@ -136,7 +135,7 @@ export function FullProfileView({ profileId }: FullProfileViewProps) {
         text: 'Hemos enviado un enlace de confirmación a tu nuevo correo. Debes hacer clic en él para que el cambio se refleje en tu cuenta.',
         icon: 'info',
         confirmButtonColor: '#f59e0b',
-        background: '#0a0a0a',
+        background: '#111111',
         color: '#fff'
       });
 
@@ -169,14 +168,13 @@ export function FullProfileView({ profileId }: FullProfileViewProps) {
       confirmButtonColor: '#ef4444',
       confirmButtonText: 'SÍ, ELIMINAR TODO',
       cancelButtonText: 'CANCELAR',
-      background: '#fff',
-      color: '#111'
+      background: '#111111',
+      color: '#fff'
     });
 
     if (result.isConfirmed) {
       try {
         setLoading(true);
-        // Obtener el token de sesión actual para autorizar la eliminación
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
 
@@ -197,7 +195,6 @@ export function FullProfileView({ profileId }: FullProfileViewProps) {
         }
 
         await supabase.auth.signOut();
-        // Limpiar cookie de sesión para evitar bucles en middleware
         document.cookie = "barbershop-auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
         router.push('/');
         toast.success('Cuenta eliminada permanentemente');
@@ -211,99 +208,85 @@ export function FullProfileView({ profileId }: FullProfileViewProps) {
   };
 
   const isOwnerOfProfile = currentUser?.id === profileId;
-  const isDark = barber?.role === 'barber' || barber?.role === 'client';
 
   if (loading) {
     return (
       <div className="flex items-center justify-center p-20">
-        <div className={`w-8 h-8 border-2 ${isDark ? 'border-[#f59e0b]' : 'border-[#0061ff]'} border-t-transparent rounded-full animate-spin`} />
+        <div className="w-8 h-8 border-4 border-brand/20 border-t-brand rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className={`font-sans pb-32 relative min-h-screen`}>
+    <div className="font-sans pb-32 relative">
       {/* ── FONDO DINÁMICO DEL PERFIL (WALLPAPER) ─────────────────────────── */}
-      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden rounded-t-[2.5rem]">
         {barber?.avatar_url ? (
           <img
             src={barber.avatar_url}
             alt="Wallpaper Perfil"
-            className="w-full h-full object-cover opacity-50 transition-all duration-700"
+            className="w-full h-full object-cover opacity-20 transition-all duration-700 blur-sm"
           />
         ) : (
-          <div className={`w-full h-full ${isDark ? 'bg-[#050505]' : 'bg-gray-50'}`} />
+          <div className="w-full h-full bg-bg-base" />
         )}
-        <div className={`absolute inset-0 ${isDark ? 'bg-black/40 backdrop-brightness-[0.6]' : 'bg-white/20'}`} />
-        <div className={`absolute inset-0 ${isDark ? 'bg-gradient-to-t from-black via-transparent to-black/20' : ''}`} />
+        <div className="absolute inset-0 bg-gradient-to-t from-bg-base via-bg-base/90 to-transparent" />
       </div>
 
-      <div className="mx-auto px-4 max-w-2xl space-y-8 relative z-10 pt-8">
+      <div className="mx-auto space-y-6 relative z-10">
 
         {/* Profile Card Principal */}
-        <div className={`${isDark ? 'bg-black/80 backdrop-blur-xl border-white/10 shadow-2xl' : 'bg-white border-gray-100 shadow-sm'} border rounded-[2rem] p-6 flex flex-col items-center text-center space-y-4 relative overflow-hidden`}>
+        <div className="bg-surface/80 backdrop-blur-xl border border-white/5 rounded-3xl p-8 flex flex-col items-center text-center space-y-4 relative overflow-hidden shadow-2xl">
           
-          {/* Si es cliente y es su propio perfil, quitamos el círculo y solo dejamos la cámara */}
-          {barber?.role === 'client' && isOwnerOfProfile ? (
-            <div className="py-6">
-              <label className={`group relative w-20 h-20 rounded-[2rem] border-2 border-dashed ${isDark ? 'border-white/10 hover:border-[#f59e0b]/50 hover:bg-[#f59e0b]/5' : 'border-gray-200 hover:border-[#0061ff]/50 hover:bg-[#0061ff]/5'} flex flex-col items-center justify-center cursor-pointer transition-all active:scale-95`}>
-                <Camera size={24} className={`${isDark ? 'text-white/20 group-hover:text-[#f59e0b]' : 'text-gray-300 group-hover:text-[#0061ff]'} transition-colors`} />
-                <span className={`text-[8px] font-black uppercase tracking-widest mt-2 ${isDark ? 'text-white/20 group-hover:text-[#f59e0b]' : 'text-gray-300 group-hover:text-[#0061ff]'}`}>Fondo</span>
-                <input type="file" className="hidden" accept="image/*" onChange={handlePhotoUpload} disabled={uploading} />
-                {uploading && (
-                  <div className="absolute inset-0 bg-black/60 rounded-[2rem] flex items-center justify-center">
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  </div>
-                )}
-              </label>
-            </div>
-          ) : (
-            /* Para Barberos o cuando un cliente ve a un barbero, mantenemos el avatar circular/cuadrado premium */
-            <div className="relative">
-              <div className={`w-32 h-32 rounded-[2.5rem] border-4 ${isDark ? 'border-white/10' : 'border-white'} shadow-2xl overflow-hidden bg-gray-50 flex items-center justify-center`}>
-                {barber?.avatar_url ? (
-                  <img src={barber.avatar_url} alt={`Foto de perfil de ${barber.name}`} className="w-full h-full object-cover" />
-                ) : (
-                  <User size={50} className="text-gray-300" />
-                )}
-              </div>
-              {isOwnerOfProfile && (
-                <label className={`absolute bottom-0 right-0 ${isDark ? 'bg-[#f59e0b] text-black' : 'bg-[#0061ff] text-white'} p-2.5 rounded-2xl border-2 ${isDark ? 'border-black' : 'border-white'} cursor-pointer active:scale-90 transition-all shadow-lg`}>
-                  <Camera size={16} />
-                  <input type="file" className="hidden" accept="image/*" onChange={handlePhotoUpload} disabled={uploading} />
-                </label>
+          <div className="relative">
+            <div className="w-28 h-28 rounded-full border-4 border-surface shadow-2xl overflow-hidden bg-bg-base flex items-center justify-center ring-2 ring-brand/20">
+              {barber?.avatar_url ? (
+                <img src={barber.avatar_url} alt={`Foto de ${barber.name}`} className="w-full h-full object-cover" />
+              ) : (
+                <User size={40} className="text-white/20" />
               )}
             </div>
-          )}
+            {isOwnerOfProfile && (
+              <label className="absolute bottom-0 right-0 bg-brand text-black p-2.5 rounded-full border-2 border-surface cursor-pointer active:scale-90 transition-all shadow-lg hover:scale-105">
+                <Camera size={16} />
+                <input type="file" className="hidden" accept="image/*" onChange={handlePhotoUpload} disabled={uploading} />
+              </label>
+            )}
+            {uploading && (
+              <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center">
+                <div className="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+          </div>
 
           <div>
-            <h2 className={`text-3xl font-black tracking-tighter ${isDark ? 'text-white' : 'text-gray-900'} uppercase leading-none mb-1 italic`}>{barber?.nickname || barber?.name}</h2>
-            <p className={`text-[11px] font-black ${isDark ? 'text-[#f59e0b]' : 'text-[#0061ff]'} uppercase tracking-[0.3em]`}>
+            <h2 className="text-2xl font-bold tracking-tight text-white uppercase leading-none mb-2">{barber?.nickname || barber?.name}</h2>
+            <p className="text-[10px] font-bold text-brand uppercase tracking-widest">
               {barber?.role === 'client' ? 'Cliente VIP' : (barber?.role === 'owner' ? 'Propietario / Master' : 'Artesano Profesional')}
             </p>
           </div>
 
-          <div className={`flex gap-10 pt-6 w-full justify-center border-t ${isDark ? 'border-white/5' : 'border-gray-50'} mt-4`}>
+          <div className="flex gap-12 pt-6 w-full justify-center border-t border-white/5 mt-4">
             <div className="text-center">
-              <p className={`text-2xl font-black ${isDark ? 'text-white' : 'text-gray-900'} leading-none tracking-tighter`}>{barber?.services_completed || 0}</p>
-              <p className="text-[9px] font-black uppercase tracking-widest text-white/40 mt-2">Servicios</p>
+              <p className="text-2xl font-bold text-white leading-none">{barber?.services_completed || 0}</p>
+              <p className="text-[9px] font-medium uppercase tracking-wider text-white/40 mt-1">Servicios</p>
             </div>
-            <div className={`w-px h-10 ${isDark ? 'bg-white/5' : 'bg-gray-100'}`} />
+            <div className="w-px h-10 bg-white/5" />
             <div className="text-center">
               <div className="flex items-center gap-1.5 justify-center">
-                <Star size={14} className="text-[#f59e0b] fill-[#f59e0b]" />
-                <p className={`text-2xl font-black ${isDark ? 'text-white' : 'text-gray-900'} leading-none tracking-tighter`}>{rating.average > 0 ? rating.average.toFixed(1) : '5.0'}</p>
+                <Star size={14} className="text-brand fill-brand" />
+                <p className="text-2xl font-bold text-white leading-none">{rating.average > 0 ? rating.average.toFixed(1) : '5.0'}</p>
               </div>
-              <p className="text-[9px] font-black uppercase tracking-widest text-white/40 mt-2">Rating</p>
+              <p className="text-[9px] font-medium uppercase tracking-wider text-white/40 mt-1">Rating</p>
             </div>
           </div>
         </div>
 
-        {/* Biografía (Solo si existe) */}
+        {/* Biografía */}
         {barber?.bio && (
-          <div className={`${isDark ? 'bg-black/80 backdrop-blur-xl border-white/10 shadow-2xl' : 'bg-white border-gray-100 shadow-sm'} border rounded-[2rem] p-6 space-y-3`}>
-            <h3 className={`text-[9px] font-black uppercase tracking-[0.4em] ${isDark ? 'text-[#f59e0b]' : 'text-[#0061ff]'}`}>Sobre Mí</h3>
-            <p className={`text-xs leading-relaxed ${isDark ? 'text-white/80' : 'text-gray-600'} italic font-medium`}>
+          <div className="bg-surface/80 backdrop-blur-xl border border-white/5 rounded-2xl p-6 space-y-3 shadow-xl">
+            <h3 className="text-[10px] font-bold uppercase tracking-widest text-brand">Sobre Mí</h3>
+            <p className="text-sm leading-relaxed text-white/80 italic">
               &quot;{barber.bio}&quot;
             </p>
           </div>
@@ -311,47 +294,47 @@ export function FullProfileView({ profileId }: FullProfileViewProps) {
 
         {/* Detalles de Contacto */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className={`${isDark ? 'bg-black/80 backdrop-blur-xl border-white/10 shadow-2xl' : 'bg-white border-gray-100 shadow-sm'} border rounded-2xl p-6 flex items-center gap-4`}>
-            <div className={`w-10 h-10 ${isDark ? 'bg-[#f59e0b]/10 text-[#f59e0b]' : 'bg-blue-50 text-[#0061ff]'} rounded-xl flex items-center justify-center`}>
-              <Mail size={18} />
+          <div className="bg-surface/80 backdrop-blur-xl border border-white/5 rounded-2xl p-6 flex items-center gap-4 shadow-xl">
+            <div className="w-12 h-12 bg-brand/10 text-brand rounded-xl flex items-center justify-center shrink-0">
+              <Mail size={20} />
             </div>
             <div className="min-w-0">
-              <p className="text-[9px] font-black uppercase tracking-widest text-white/60 leading-none mb-1">Email</p>
-              <p className={`text-xs font-semibold ${isDark ? 'text-white/80' : 'text-gray-700'} truncate`}>{barber?.email || '---'}</p>
+              <p className="text-[9px] font-medium uppercase tracking-wider text-white/40 leading-none mb-1">Email</p>
+              <p className="text-sm font-semibold text-white/90 truncate">{barber?.email || '---'}</p>
             </div>
           </div>
-          <div className={`${isDark ? 'bg-black/80 backdrop-blur-xl border-white/10 shadow-2xl' : 'bg-white border-gray-100 shadow-sm'} border rounded-2xl p-6 flex items-center gap-4`}>
-            <div className={`w-10 h-10 ${isDark ? 'bg-emerald-500/10 text-emerald-500' : 'bg-emerald-50 text-emerald-600'} rounded-xl flex items-center justify-center`}>
-              <Phone size={18} />
+          <div className="bg-surface/80 backdrop-blur-xl border border-white/5 rounded-2xl p-6 flex items-center gap-4 shadow-xl">
+            <div className="w-12 h-12 bg-emerald-500/10 text-emerald-500 rounded-xl flex items-center justify-center shrink-0">
+              <Phone size={20} />
             </div>
             <div className="min-w-0">
-              <p className="text-[9px] font-bold uppercase tracking-widest text-white/60 leading-none mb-1">WhatsApp</p>
-              <p className={`text-xs font-semibold ${isDark ? 'text-white/80' : 'text-gray-700'}`}>{barber?.phone || '---'}</p>
+              <p className="text-[9px] font-medium uppercase tracking-wider text-white/40 leading-none mb-1">WhatsApp</p>
+              <p className="text-sm font-semibold text-white/90">{barber?.phone || '---'}</p>
             </div>
           </div>
         </div>
 
         {/* Acciones de Gestión (Solo Propietario) */}
         {isOwnerOfProfile ? (
-          <div className="space-y-4">
+          <div className="space-y-4 pt-4">
             <button
               onClick={() => setIsSettingsOpen(true)}
-              className={`w-full ${isDark ? 'bg-[#f59e0b] text-black' : 'bg-[#0061ff] text-white'} py-5 rounded-[2rem] font-black uppercase tracking-[0.3em] text-[11px] flex items-center justify-center gap-3 active:scale-95 transition-all shadow-xl shadow-amber-500/10`}
+              className="w-full bg-brand text-black py-4 rounded-xl font-bold uppercase tracking-widest text-xs flex items-center justify-center gap-2 active:scale-95 transition-all shadow-xl shadow-brand/10 hover:bg-brand/90"
             >
-              <Settings size={18} />
+              <Settings size={16} />
               Editar Mi Perfil
             </button>
 
             {/* Solo clientes y dueños pueden auto-eliminarse. Los barberos deben ser eliminados por el Owner */}
             {barber?.role !== 'barber' && (
-              <div className={`${isDark ? 'bg-black/80 backdrop-blur-xl border-white/10 shadow-2xl' : 'bg-gray-50 border-gray-100 shadow-sm'} rounded-[2rem] p-8 border space-y-4 text-center`}>
-                <div className="flex items-center gap-2 text-red-500 justify-center">
+              <div className="bg-surface/50 border border-red-500/10 rounded-2xl p-6 space-y-4 text-center mt-8">
+                <div className="flex items-center gap-2 text-red-500/60 justify-center">
                   <Shield size={16} />
-                  <p className="text-[10px] font-black uppercase tracking-widest">Seguridad de Cuenta</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest">Zona de Peligro</p>
                 </div>
                 <button
                   onClick={handleDeleteAccount}
-                  className={`w-full py-3 rounded-xl font-black uppercase tracking-widest text-[9px] border transition-all ${isDark ? 'bg-white/5 border-red-500/20 text-red-500/60 hover:bg-red-500 hover:text-white' : 'bg-white border-red-100 text-red-500 hover:bg-red-50'}`}
+                  className="w-full py-3 rounded-xl font-bold uppercase tracking-widest text-[10px] border transition-all bg-bg-base border-red-500/20 text-red-500/80 hover:bg-red-500/10 hover:text-red-400"
                 >
                   Eliminar Cuenta Permanentemente
                 </button>
@@ -364,9 +347,9 @@ export function FullProfileView({ profileId }: FullProfileViewProps) {
             <div className="pt-6">
               <button
                 onClick={() => router.push(`/dashboard/client/${currentUser?.id}/reservas/barber/${profileId}`)}
-                className={`w-full bg-[#f59e0b] text-black py-6 rounded-[2.5rem] font-black uppercase tracking-[0.3em] text-[12px] shadow-2xl shadow-amber-500/20 active:scale-95 transition-all flex items-center justify-center gap-3`}
+                className="w-full bg-brand text-black py-4 rounded-xl font-bold uppercase tracking-widest text-xs shadow-xl shadow-brand/20 active:scale-95 transition-all flex items-center justify-center gap-2 hover:bg-brand/90"
               >
-                <Settings size={18} className="rotate-90" />
+                <Settings size={16} className="rotate-90" />
                 Agendar con {barber?.nickname || barber?.name}
               </button>
             </div>
@@ -378,86 +361,85 @@ export function FullProfileView({ profileId }: FullProfileViewProps) {
       <AnimatePresence>
         {isSettingsOpen && (
           <motion.div
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%' }}
-            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed inset-0 z-[999] flex flex-col bg-black overflow-hidden"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed inset-0 z-[999] flex flex-col bg-bg-base overflow-hidden"
           >
             {/* Header del Modal */}
-            <div className={`shrink-0 h-20 border-b ${isDark ? 'bg-black/90 border-white/10' : 'bg-white border-gray-100'} backdrop-blur-2xl flex items-center justify-between px-6 z-10`}>
+            <div className="shrink-0 h-20 border-b bg-surface/90 border-white/5 backdrop-blur-2xl flex items-center justify-between px-6 z-10">
               <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-xl ${isDark ? 'bg-[#f59e0b]/10 text-[#f59e0b]' : 'bg-[#0061ff]/10 text-[#0061ff]'} flex items-center justify-center`}>
+                <div className="w-10 h-10 rounded-xl bg-brand/10 text-brand flex items-center justify-center">
                   <Settings size={20} />
                 </div>
-                <h2 className={`text-xl font-black ${isDark ? 'text-white' : 'text-gray-900'} uppercase tracking-tighter italic`}>Configuración</h2>
+                <h2 className="text-lg font-bold text-white uppercase tracking-tight">Configuración</h2>
               </div>
               <button
                 onClick={() => setIsSettingsOpen(false)}
-                className={`w-10 h-10 ${isDark ? 'bg-white/5 text-white hover:bg-white/10' : 'bg-gray-100 text-gray-900'} rounded-full flex items-center justify-center transition-all active:scale-90`}
+                className="w-10 h-10 bg-white/5 text-white/60 hover:text-white hover:bg-white/10 rounded-full flex items-center justify-center transition-all active:scale-90"
               >
                 <X size={20} />
               </button>
             </div>
 
-            {/* Cuerpo del Modal (Scrollable) */}
+            {/* Cuerpo del Modal */}
             <div className="flex-1 overflow-y-auto custom-scrollbar bg-transparent pb-32">
-              <div className="max-w-2xl mx-auto p-6 sm:p-10 space-y-10">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="max-w-3xl mx-auto p-6 sm:p-10 space-y-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className={`text-[10px] font-bold ${isDark ? 'text-white/70' : 'text-gray-500'} uppercase tracking-widest ml-1`}>Nombre Real</label>
-                    <input type="text" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} className={`w-full ${isDark ? 'bg-white/5 border-white/5 text-white' : 'bg-gray-50 border-gray-100 text-gray-900'} border rounded-xl px-4 py-3 text-xs outline-none focus:border-[#f59e0b] transition-all font-bold`} />
+                    <label className="text-[10px] font-medium text-white/40 uppercase tracking-wider ml-1">Nombre Real</label>
+                    <input type="text" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} className="w-full bg-surface border border-white/5 text-white rounded-xl px-4 py-3 text-sm outline-none focus:border-brand transition-all shadow-sm" />
                   </div>
                   <div className="space-y-2">
-                    <label className={`text-[10px] font-bold ${isDark ? 'text-white/70' : 'text-gray-500'} uppercase tracking-widest ml-1`}>Apodo / Marca</label>
-                    <input type="text" value={editForm.nickname} onChange={(e) => setEditForm({ ...editForm, nickname: e.target.value })} className={`w-full ${isDark ? 'bg-white/5 border-white/5 text-white' : 'bg-gray-50 border-gray-100 text-gray-900'} border rounded-xl px-4 py-3 text-xs outline-none focus:border-[#f59e0b] transition-all font-bold`} placeholder="Ej: Barber Master" />
+                    <label className="text-[10px] font-medium text-white/40 uppercase tracking-wider ml-1">Apodo / Marca</label>
+                    <input type="text" value={editForm.nickname} onChange={(e) => setEditForm({ ...editForm, nickname: e.target.value })} className="w-full bg-surface border border-white/5 text-white rounded-xl px-4 py-3 text-sm outline-none focus:border-brand transition-all shadow-sm" placeholder="Ej: Barber Master" />
                   </div>
                   <div className="space-y-2">
-                    <label className={`text-[10px] font-bold ${isDark ? 'text-white/70' : 'text-gray-500'} uppercase tracking-widest ml-1`}>WhatsApp</label>
-                    <input type="text" value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} className={`w-full ${isDark ? 'bg-white/5 border-white/5 text-white' : 'bg-gray-50 border-gray-100 text-gray-900'} border rounded-xl px-4 py-3 text-xs outline-none focus:border-[#f59e0b] transition-all font-bold`} />
+                    <label className="text-[10px] font-medium text-white/40 uppercase tracking-wider ml-1">WhatsApp</label>
+                    <input type="text" value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} className="w-full bg-surface border border-white/5 text-white rounded-xl px-4 py-3 text-sm outline-none focus:border-brand transition-all shadow-sm" />
                   </div>
                 </div>
 
                 {barber?.role !== 'client' && (
-                  <>
+                  <div className="space-y-6 pt-4">
                     <div className="space-y-2">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Dirección / Local</label>
-                      <input type="text" value={editForm.address} onChange={(e) => setEditForm({ ...editForm, address: e.target.value })} className={`w-full ${isDark ? 'bg-white/5 border-white/5 text-white' : 'bg-gray-50 border-gray-100 text-gray-900'} border rounded-xl px-4 py-3 text-xs outline-none focus:border-[#f59e0b] transition-all font-bold`} />
+                      <label className="text-[10px] font-medium text-white/40 uppercase tracking-wider ml-1">Dirección / Local</label>
+                      <input type="text" value={editForm.address} onChange={(e) => setEditForm({ ...editForm, address: e.target.value })} className="w-full bg-surface border border-white/5 text-white rounded-xl px-4 py-3 text-sm outline-none focus:border-brand transition-all shadow-sm" />
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Bio / Descripción</label>
+                      <label className="text-[10px] font-medium text-white/40 uppercase tracking-wider ml-1">Bio / Descripción</label>
                       <textarea
                         value={editForm.bio}
                         onChange={(e) => setEditForm({ ...editForm, bio: e.target.value })}
-                        className={`w-full ${isDark ? 'bg-white/5 border-white/5 text-white' : 'bg-gray-50 border-gray-100 text-gray-900'} border rounded-xl px-4 py-3 text-xs outline-none focus:border-[#f59e0b] transition-all min-h-[100px] resize-none font-medium`}
+                        className="w-full bg-surface border border-white/5 text-white rounded-xl px-4 py-3 text-sm outline-none focus:border-brand transition-all min-h-[100px] resize-none shadow-sm"
                       />
                     </div>
-                  </>
+                  </div>
                 )}
 
-                <button onClick={handleUpdateProfile} className={`w-full ${isDark ? 'bg-[#f59e0b] text-black shadow-amber-500/10' : 'bg-[#0061ff] text-white shadow-blue-500/20'} py-4 rounded-xl font-black uppercase tracking-widest text-[11px] mt-4 shadow-lg transition-all active:scale-95`}>
-                  Guardar Cambios
+                <button onClick={handleUpdateProfile} className="w-full bg-brand text-black py-4 rounded-xl font-bold uppercase tracking-widest text-xs mt-8 shadow-xl hover:bg-brand/90 transition-all active:scale-95 disabled:opacity-50">
+                  GUARDAR CAMBIOS
                 </button>
 
-                <div className={`h-px ${isDark ? 'bg-white/5' : 'bg-gray-100'} my-8`} />
+                <div className="h-px bg-white/5 my-10" />
 
                 <div className="space-y-6">
-                  <h3 className={`text-sm font-black ${isDark ? 'text-white' : 'text-gray-900'} uppercase tracking-widest italic`}>Seguridad de la Cuenta</h3>
-                  <div className="space-y-4">
+                  <h3 className="text-xs font-bold text-white uppercase tracking-widest">Seguridad de la Cuenta</h3>
+                  <div className="space-y-6 bg-surface p-6 rounded-2xl border border-white/5">
                     <div className="space-y-2">
-                      <label className={`text-[10px] font-bold ${isDark ? 'text-white/70' : 'text-gray-500'} uppercase tracking-widest ml-1`}>Nuevo Email</label>
-                      <div className="flex gap-2">
-                        <input type="email" placeholder="ejemplo@correo.com" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} className={`flex-1 ${isDark ? 'bg-white/5 border-white/5 text-white' : 'bg-gray-50 border-gray-100 text-gray-900'} border rounded-xl px-4 py-3 text-xs outline-none focus:border-[#f59e0b] transition-all font-bold`} />
-                        <button onClick={handleChangeEmail} className={`px-6 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${isDark ? 'bg-white text-black' : 'bg-gray-900 text-white'}`}>Cambiar</button>
+                      <label className="text-[10px] font-medium text-white/40 uppercase tracking-wider ml-1">Nuevo Email</label>
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        <input type="email" placeholder="ejemplo@correo.com" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} className="flex-1 bg-bg-base border border-white/5 text-white rounded-xl px-4 py-3 text-sm outline-none focus:border-brand transition-all shadow-sm" />
+                        <button onClick={handleChangeEmail} className="px-6 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all bg-white text-black hover:bg-gray-200">Cambiar Email</button>
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <label className={`text-[10px] font-bold ${isDark ? 'text-white/70' : 'text-gray-500'} uppercase tracking-widest ml-1`}>Nueva Contraseña</label>
-                      <div className="flex gap-2">
-                        <input type="password" placeholder="••••••••" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className={`flex-1 ${isDark ? 'bg-white/5 border-white/5 text-white' : 'bg-gray-50 border-gray-100 text-gray-900'} border rounded-xl px-4 py-3 text-xs outline-none focus:border-[#f59e0b] transition-all font-bold`} />
-                        <button onClick={handleChangePassword} className={`px-6 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${isDark ? 'bg-white text-black' : 'bg-gray-900 text-white'}`}>Cambiar</button>
+                      <label className="text-[10px] font-medium text-white/40 uppercase tracking-wider ml-1">Nueva Contraseña</label>
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        <input type="password" placeholder="••••••••" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="flex-1 bg-bg-base border border-white/5 text-white rounded-xl px-4 py-3 text-sm outline-none focus:border-brand transition-all shadow-sm" />
+                        <button onClick={handleChangePassword} className="px-6 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all bg-white text-black hover:bg-gray-200">Actualizar</button>
                       </div>
                     </div>
                   </div>

@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { useBarberFinance, useBarberStats } from '@/hooks/useBarberData';
+import { useBarberFinance, useBarberStats } from '@/hooks/barber';
 import {
    Clock,
    Calendar,

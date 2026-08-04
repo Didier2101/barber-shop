@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useBarberAgenda } from '@/hooks/useBarberData';
+import { useBarberAgenda } from '@/hooks/barber';
 import {
    Plus,
    Clock,
@@ -15,7 +15,7 @@ import { toast } from 'sonner';
 import { Service } from '@/types';
 import { useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { useUpdateAppointmentStatus } from '@/hooks/useBarberData';
+import { useUpdateAppointmentStatus } from '@/hooks/barber';
 
 export default function BarberDashboardPage() {
    const params = useParams();

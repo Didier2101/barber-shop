@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useClientAppointments, usePromotions, useLoyaltySettings } from '@/hooks/useClientData';
+import { useClientAppointments, usePromotions, useLoyaltySettings } from '@/hooks/client';
 import {
    Scissors,
    Star,

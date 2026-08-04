@@ -120,11 +120,8 @@ export interface Settlement {
   barber_earnings: number;
   owner_earnings: number;
   commission_applied: number;
-  settled_by?: string | null;
-  notes?: string | null;
   created_at: string;
   barber?: { name: string };
-  settled_by_profile?: { name: string };
 }
 
 export interface Expense {

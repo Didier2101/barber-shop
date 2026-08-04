@@ -1,17 +1,23 @@
 'use client';
 import { useGlobalStore } from '@/store/useGlobalStore';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
 
 import {
-  CalendarDays,
-  UserCircle,
-  Home,
+  Activity,
+  Check,
+  Clock,
+  Sparkles,
+  Users,
+  User,
   Scissors,
+  DollarSign,
+  UserCircle,
   Menu,
   LogOut,
   X,
-  ChevronDown
+  ChevronDown,
+  Settings
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -19,30 +25,25 @@ import { usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import Swal from 'sweetalert2';
 
-export default function ClientLayout({ children }: { children: React.ReactNode }) {
+export default function OwnerLayout({ children }: { children: React.ReactNode }) {
   const userProfile = useGlobalStore(state => state.userProfile);
   const clearStore = useGlobalStore(state => state.clearStore);
   const router = useRouter();
   const pathname = usePathname();
-  const params = useParams();
   
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
   
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const clientId = params.id || userProfile?.id || '';
-
   useEffect(() => {
-    if (userProfile && userProfile.role !== 'client' && userProfile.role !== 'owner') {
+    if (userProfile && userProfile.role !== 'owner') {
       if (userProfile.role === 'barber') router.replace(`/dashboard/barber/${userProfile.id}`);
-      else router.replace('/dashboard/owner');
+      else router.replace(`/dashboard/client/${userProfile.id}`);
     }
-    if (userProfile && params.id && userProfile.id !== params.id && userProfile.role !== 'owner') {
-      router.replace(`/dashboard/client/${userProfile.id}`);
-    }
-  }, [userProfile, router, params.id]);
+  }, [userProfile, router]);
 
+  // Cerrar el dropdown si se hace click fuera
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -66,6 +67,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       background: '#111111',
       color: '#fff'
     });
+
     if (result.isConfirmed) {
       clearStore();
       document.cookie = "barbershop-auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
@@ -75,15 +77,20 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   };
 
   const tabs = [
-    { id: 'inicio',   icon: Home,        label: 'Inicio',      href: `/dashboard/client/${clientId}` },
-    { id: 'reservas', icon: CalendarDays, label: 'Mis Reservas', href: `/dashboard/client/${clientId}/reservas` },
-    { id: 'perfil',   icon: UserCircle,   label: 'Mi Perfil',   href: `/dashboard/client/${clientId}/profile` },
+    { id: 'inicio', icon: Activity, label: 'Inicio', href: '/dashboard/owner' },
+    { id: 'config', icon: Clock, label: 'Horarios', href: '/dashboard/owner/schedules' },
+    { id: 'promociones', icon: Sparkles, label: 'Promociones', href: '/dashboard/owner/promotions' },
+    { id: 'barberos', icon: Users, label: 'Equipo', href: '/dashboard/owner/team' },
+    { id: 'clientes', icon: User, label: 'Clientes', href: '/dashboard/owner/clients' },
+    { id: 'servicios', icon: Scissors, label: 'Servicios', href: '/dashboard/owner/services' },
+    { id: 'gastos', icon: DollarSign, label: 'Gastos', href: '/dashboard/owner/expenses' },
+    { id: 'ajustes', icon: Settings, label: 'Configuración', href: '/dashboard/owner/settings' }
   ];
 
-  if (!userProfile) return null;
+  if (!userProfile || userProfile.role !== 'owner') return null;
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-bg-base text-white overflow-hidden">
+    <div className="flex flex-col h-screen bg-bg-base text-white overflow-hidden">
       {/* FONDO SÓLIDO PREMIUM */}
       <div className="fixed inset-0 z-0 bg-bg-base" />
 
@@ -93,7 +100,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       <header className="hidden lg:flex items-center justify-between px-8 h-20 shrink-0 z-40 bg-surface/80 backdrop-blur-xl border-b border-white/5 relative shadow-lg">
         
         {/* LOGO */}
-        <Link href={`/dashboard/client/${clientId}`} className="flex items-center gap-3 group">
+        <Link href="/dashboard/owner" className="flex items-center gap-3 group">
           <div className="bg-brand p-2.5 rounded-xl shadow-md group-hover:scale-105 transition-transform shrink-0">
             <Scissors size={20} className="text-black" />
           </div>
@@ -105,7 +112,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         {/* NAVEGACIÓN CENTRAL */}
         <nav className="flex items-center gap-1 xl:gap-2 absolute left-1/2 -translate-x-1/2">
           {tabs.map(tab => {
-            const isActive = pathname === tab.href || pathname.startsWith(tab.href + '/');
+            const isActive = pathname === tab.href;
             return (
               <Link
                 key={tab.id}
@@ -137,7 +144,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             </div>
             <div className="text-left hidden md:block">
                <p className="text-sm font-bold text-white leading-none capitalize truncate max-w-[120px]">{userProfile.name}</p>
-               <p className="text-[10px] font-bold text-brand uppercase tracking-widest mt-1">Cliente</p>
+               <p className="text-[10px] font-bold text-brand uppercase tracking-widest mt-1">Dueño</p>
             </div>
             <ChevronDown size={16} className={`text-white/40 transition-transform ${isUserDropdownOpen ? 'rotate-180' : ''}`} />
           </button>
@@ -150,7 +157,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                </div>
                <div className="p-2 space-y-1">
                   <Link 
-                     href={`/dashboard/client/${clientId}/profile`}
+                     href="/dashboard/owner/profile"
                      onClick={() => setIsUserDropdownOpen(false)}
                      className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-xs font-bold text-white hover:bg-white/5 transition-all"
                   >
@@ -174,7 +181,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           HEADER MÓVIL (TOP)
       ───────────────────────────────────────────────────────────── */}
       <header className="lg:hidden fixed top-0 left-0 right-0 h-20 bg-surface/90 backdrop-blur-2xl border-b border-white/5 flex items-center justify-between px-6 z-[60]">
-        <Link href={`/dashboard/client/${clientId}`} className="flex items-center gap-3">
+        <Link href="/dashboard/owner" className="flex items-center gap-3">
           <div className="bg-brand/10 border border-brand/20 p-2.5 rounded-xl">
             <Scissors size={18} className="text-brand" />
           </div>
@@ -184,7 +191,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         </Link>
         <div className="flex items-center gap-4">
           <Link
-            href={`/dashboard/client/${clientId}/profile`}
+            href="/dashboard/owner/profile"
             className="w-10 h-10 rounded-xl border border-white/10 bg-bg-base flex items-center justify-center overflow-hidden shadow-inner"
           >
             {userProfile.avatar_url
@@ -203,7 +210,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       <main className="flex-1 p-4 lg:p-10 pb-28 lg:pb-10 overflow-y-auto relative z-10 custom-scrollbar">
         <div className="lg:hidden mb-6 pt-20">
            <h1 className="text-[10px] font-bold uppercase tracking-widest text-white/40">
-             {tabs.find(t => pathname === t.href || pathname.startsWith(t.href + '/'))?.label || 'Mi Espacio'}
+             {tabs.find(t => t.href === pathname)?.label || 'Panel de Control'}
            </h1>
         </div>
         {children}
@@ -213,8 +220,13 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           MOBILE BOTTOM NAV
       ───────────────────────────────────────────────────────────── */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-20 bg-surface/95 backdrop-blur-3xl border-t border-white/5 flex items-center justify-around px-2 z-[60] pb-safe">
-        {tabs.map(tab => {
-          const isActive = pathname === tab.href || pathname.startsWith(tab.href + '/');
+        {[
+          { id: 'inicio', icon: Activity, label: 'Inicio', href: '/dashboard/owner' },
+          { id: 'liquidaciones', icon: Check, label: 'Cierres', href: '/dashboard/owner/liquidations' },
+          { id: 'barberos', icon: Users, label: 'Equipo', href: '/dashboard/owner/team' },
+          { id: 'clientes', icon: User, label: 'Clientes', href: '/dashboard/owner/clients' }
+        ].map(tab => {
+          const isActive = pathname === tab.href;
           return (
             <Link
               key={tab.id}
@@ -239,7 +251,28 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
           {isMobileMenuOpen && (
             <div className="absolute bottom-24 right-4 w-64 bg-surface border border-white/10 rounded-2xl shadow-2xl p-4 space-y-1 animate-in fade-in slide-in-from-bottom-6 duration-300">
-              <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-3 px-3">Opciones</p>
+              <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-3 px-3">Gestión Avanzada</p>
+              {[
+                { id: 'config', icon: Clock, label: 'Horarios', href: '/dashboard/owner/schedules' },
+                { id: 'promociones', icon: Sparkles, label: 'Promociones', href: '/dashboard/owner/promotions' },
+                { id: 'servicios', icon: Scissors, label: 'Servicios', href: '/dashboard/owner/services' },
+                { id: 'gastos', icon: DollarSign, label: 'Gastos', href: '/dashboard/owner/expenses' },
+                { id: 'ajustes', icon: Settings, label: 'Configuración', href: '/dashboard/owner/settings' },
+                { id: 'perfil', icon: UserCircle, label: 'Mi Perfil', href: '/dashboard/owner/profile' }
+              ].map(tab => {
+                const isActive = pathname === tab.href;
+                return (
+                  <Link
+                    key={tab.id}
+                    href={tab.href}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={`flex items-center gap-4 px-4 py-3.5 rounded-xl text-xs font-bold transition-all ${isActive ? 'bg-brand/10 text-brand' : 'text-white hover:bg-white/5'}`}
+                  >
+                    <tab.icon size={18} />
+                    {tab.label}
+                  </Link>
+                );
+              })}
               <div className="h-px bg-white/5 my-3" />
               <button onClick={handleLogout} className="flex items-center gap-4 w-full px-4 py-3.5 rounded-xl text-xs font-bold text-red-500 hover:bg-red-500/10 transition-all">
                 <LogOut size={18} />

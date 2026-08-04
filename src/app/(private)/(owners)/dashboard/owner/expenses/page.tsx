@@ -1,5 +1,5 @@
 'use client';
-import { useOwnerBaseData, useOwnerMutations, useOwnerExpenses } from '@/hooks/useOwnerData';
+import { useOwnerBaseData, useOwnerMutations, useOwnerExpenses } from '@/hooks/owner';
 import { 
   DollarSign, 
   Trash, 
@@ -30,7 +30,7 @@ export default function ExpensesPage() {
   if (baseLoading || expLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="w-8 h-8 border-4 border-[#f59e0b]/20 border-t-[#f59e0b] rounded-full animate-spin"></div>
+        <div className="w-8 h-8 border-4 border-red-500/20 border-t-red-500 rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -38,39 +38,39 @@ export default function ExpensesPage() {
   const totalMonthlyExpenses = expenses.reduce((sum: number, exp: { amount: number }) => sum + Number(exp.amount), 0);
 
   return (
-    <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-6xl mx-auto pb-32">
+    <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-8xl mx-auto pb-32">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div className="flex items-center gap-5">
-          <div className="p-4 bg-black/80 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-xl text-red-500">
+          <div className="p-4 bg-black border border-white/5 rounded-2xl shadow-xl text-red-500">
             <TrendingDown size={28} />
           </div>
           <div>
-            <p className="text-red-500 text-[10px] font-black uppercase tracking-[0.4em] mb-1">Egresos</p>
-            <h2 className="text-4xl font-black tracking-tighter text-white uppercase italic leading-none">Gastos</h2>
+            <p className="text-red-500 text-[10px] font-bold uppercase tracking-[0.2em] mb-1">Egresos</p>
+            <h2 className="text-3xl font-bold tracking-tight text-white uppercase">Gastos</h2>
           </div>
         </div>
         
-        <div className="bg-red-500/10 border border-red-500/20 px-8 py-4 rounded-[2rem] backdrop-blur-md">
-           <p className="text-[9px] font-black uppercase tracking-[0.3em] text-red-400 mb-1 italic text-center">Salida Total del Mes</p>
-           <p className="text-3xl font-black text-white italic tracking-tighter leading-none">-${new Intl.NumberFormat('de-DE').format(totalMonthlyExpenses)}</p>
+        <div className="bg-black border border-red-500/20 px-8 py-4 rounded-2xl shadow-xl">
+           <p className="text-[10px] font-bold uppercase tracking-widest text-red-400/80 mb-1">Salida Total del Mes</p>
+           <p className="text-3xl font-bold text-white tracking-tight leading-none">-$${new Intl.NumberFormat('de-DE').format(totalMonthlyExpenses)}</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Listado de Gastos */}
-        <div className="lg:col-span-8 space-y-6">
-           <div className="flex items-center justify-between px-4">
-              <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-white/30 italic">Libro de Salidas</h3>
-              <button className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-white/20 hover:text-[#f59e0b] transition-all italic">
+        <div className="lg:col-span-6 space-y-6">
+           <div className="flex items-center justify-between px-2">
+              <h3 className="text-xs font-medium uppercase tracking-[0.1em] text-white/40">Libro de Salidas</h3>
+              <button className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-white/40 hover:text-red-500 transition-all">
                  <Filter size={14} /> Filtrar Periodo
               </button>
            </div>
 
-           <div className="flex flex-col -space-y-px">
+           <div className="flex flex-col gap-4">
               {expenses.length === 0 ? (
-                 <div className="py-32 text-center border-2 border-dashed border-white/5 rounded-[3rem] opacity-20 flex flex-col items-center justify-center gap-4">
-                    <Receipt size={40} className="text-white/20" />
-                    <p className="text-[11px] font-black text-white uppercase tracking-[0.4em]">Sin gastos registrados</p>
+                 <div className="py-24 text-center border border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center gap-3">
+                    <Receipt size={32} className="text-white/20" />
+                    <p className="text-sm font-medium text-white/40">Sin gastos registrados</p>
                  </div>
               ) : (
                  expenses.map((expense: { id: string; amount: number; description: string; category?: string; expense_date: string }, idx: number) => (
@@ -79,27 +79,23 @@ export default function ExpensesPage() {
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: idx * 0.05 }}
                       key={expense.id} 
-                      className={`
-                        bg-black/80 border border-white/10 p-5 md:p-8 flex items-center justify-between transition-all group relative z-10 hover:z-20
-                        ${idx === 0 ? 'rounded-t-[3rem]' : ''}
-                        ${idx === expenses.length - 1 ? 'rounded-b-[3rem]' : ''}
-                      `}
+                      className="bg-black border border-white/5 p-6 rounded-2xl flex items-center justify-between transition-all group hover:border-white/10 hover:shadow-xl hover:shadow-red-500/5"
                     >
                        <div className="flex items-center gap-6">
-                          <div className="w-12 h-12 bg-red-500/5 border border-red-500/20 text-red-500 rounded-2xl flex items-center justify-center">
+                          <div className="w-12 h-12 bg-bg-base border border-white/5 text-red-500 rounded-xl flex items-center justify-center shrink-0">
                              <DollarSign size={20} />
                           </div>
                           <div>
-                             <p className="text-base md:text-xl font-black text-white uppercase tracking-tighter italic leading-none mb-2">{expense.description}</p>
-                             <div className="flex items-center gap-3 text-[8px] font-black uppercase tracking-[0.2em] italic">
+                             <p className="text-lg font-bold text-white uppercase tracking-tight mb-1">{expense.description}</p>
+                             <div className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-wider">
                                 <span className="text-red-400 bg-red-500/10 px-2 py-0.5 rounded-md border border-red-500/10">{expense.category || 'General'}</span>
                                 <span className="text-white/20">•</span>
-                                <span className="text-white/20">{format(new Date(expense.expense_date), 'dd MMM, yyyy')}</span>
+                                <span className="text-white/40">{format(new Date(expense.expense_date), 'dd MMM, yyyy')}</span>
                              </div>
                           </div>
                        </div>
-                       <div className="flex items-center gap-8">
-                          <p className="text-xl md:text-2xl font-black text-white italic tracking-tighter leading-none">-${new Intl.NumberFormat('de-DE').format(expense.amount)}</p>
+                       <div className="flex items-center gap-6">
+                          <p className="text-xl font-bold text-white tracking-tight leading-none">-$${new Intl.NumberFormat('de-DE').format(expense.amount)}</p>
                           <button 
                              onClick={() => {
                                 Swal.fire({
@@ -110,15 +106,15 @@ export default function ExpensesPage() {
                                   confirmButtonColor: '#ef4444',
                                   confirmButtonText: 'ELIMINAR',
                                   cancelButtonText: 'CANCELAR',
-                                  background: '#0a0a0a',
+                                  background: '#111111',
                                   color: '#fff',
                                 }).then(result => {
                                   if (result.isConfirmed) deleteExpense.mutate(expense.id);
                                 });
                              }}
-                             className="p-3 text-white/10 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                             className="p-2 text-white/20 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
                           >
-                             <Trash size={18} />
+                             <Trash size={16} />
                           </button>
                        </div>
                     </motion.div>
@@ -128,43 +124,50 @@ export default function ExpensesPage() {
         </div>
 
         {/* Formulario Nuevo Gasto */}
-        <div className="lg:col-span-4 space-y-6">
-           <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-white/30 px-4 italic">Contabilidad</h3>
-           <div className="bg-black/80 border border-white/10 rounded-[3rem] p-10 shadow-2xl space-y-8 backdrop-blur-xl relative overflow-hidden">
-              <div className="space-y-4 relative z-10">
-                 <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl w-fit text-red-500">
-                    <Plus size={24} />
+        <div className="lg:col-span-6 space-y-6">
+           <h3 className="text-xs font-medium uppercase tracking-[0.1em] text-white/40 px-2">Contabilidad</h3>
+           <div className="bg-black border border-white/5 rounded-2xl p-6 shadow-xl space-y-6 relative overflow-hidden">
+              <div className="space-y-2 relative z-10">
+                 <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl w-fit text-red-500 mb-4">
+                    <Plus size={20} />
                  </div>
-                 <h4 className="text-2xl font-black text-white uppercase italic tracking-tighter leading-none">Registrar Gasto</h4>
+                 <h4 className="text-lg font-bold text-white">Registrar Gasto</h4>
               </div>
 
-              <div className="space-y-6 relative z-10">
-                 <div className="space-y-3">
-                    <label className="text-[9px] font-black text-white/20 uppercase tracking-[0.3em] ml-1 italic">Monto de la Salida ($)</label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
+                 <div className="space-y-1.5">
+                    <label className="text-[10px] font-medium text-white/40 uppercase tracking-wider ml-1">Monto de la Salida ($)</label>
                     <input 
                        type="number" 
                        placeholder="0.00"
-                       className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-5 text-xl font-black text-white outline-none focus:border-red-500/40 transition-all"
+                       className="w-full bg-bg-base border border-white/5 rounded-xl px-4 py-3 text-sm font-bold text-white outline-none focus:border-red-500/40 transition-all shadow-sm"
                        value={newExpense.amount}
-                       onChange={e => setNewExpense({ ...newExpense, amount: e.target.value })}
+                       onChange={e => {
+                         const val = e.target.value;
+                         if (val.length > 1 && val.startsWith('0') && !val.startsWith('0.')) {
+                           setNewExpense({ ...newExpense, amount: val.replace(/^0+/, '') });
+                         } else {
+                           setNewExpense({ ...newExpense, amount: val });
+                         }
+                       }}
                     />
                  </div>
 
-                 <div className="space-y-3">
-                    <label className="text-[9px] font-black text-white/20 uppercase tracking-[0.3em] ml-1 italic">Descripción / Concepto</label>
+                 <div className="space-y-1.5 md:col-span-2">
+                    <label className="text-[10px] font-medium text-white/40 uppercase tracking-wider ml-1">Descripción / Concepto</label>
                     <textarea 
                        placeholder="Ej: Pago de Arriendo Mayo"
-                       className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-5 text-[11px] font-black uppercase text-white placeholder:text-white/10 outline-none focus:border-red-500/40 transition-all min-h-[100px]"
+                       className="w-full bg-bg-base border border-white/5 rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/20 outline-none focus:border-red-500/40 transition-all min-h-[80px] resize-none shadow-sm"
                        value={newExpense.description}
                        onChange={e => setNewExpense({ ...newExpense, description: e.target.value })}
                     />
                  </div>
 
-                 <div className="space-y-3">
-                    <label className="text-[9px] font-black text-white/20 uppercase tracking-[0.3em] ml-1 italic">Categoría Administrativa</label>
+                 <div className="space-y-1.5">
+                    <label className="text-[10px] font-medium text-white/40 uppercase tracking-wider ml-1">Categoría Administrativa</label>
                     <div className="relative">
                       <select 
-                         className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-5 text-[11px] font-black uppercase tracking-widest text-white outline-none focus:border-red-500/40 transition-all appearance-none cursor-pointer"
+                         className="w-full bg-bg-base border border-white/5 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-red-500/40 transition-all appearance-none cursor-pointer shadow-sm"
                          value={newExpense.category}
                          onChange={e => setNewExpense({ ...newExpense, category: e.target.value })}
                       >
@@ -176,15 +179,15 @@ export default function ExpensesPage() {
                          <option value="Mantenimiento">Mantenimiento</option>
                          <option value="Otros">Otros Gastos</option>
                       </select>
-                      <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none opacity-20"><ArrowRight size={16} className="rotate-90" /></div>
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none opacity-40"><ArrowRight size={16} className="rotate-90" /></div>
                     </div>
                  </div>
 
-                 <div className="space-y-3">
-                    <label className="text-[9px] font-black text-white/20 uppercase tracking-[0.3em] ml-1 italic">Fecha del Egreso</label>
+                 <div className="space-y-1.5">
+                    <label className="text-[10px] font-medium text-white/40 uppercase tracking-wider ml-1">Fecha del Egreso</label>
                     <input 
                        type="date" 
-                       className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-5 text-[11px] font-black text-white outline-none focus:border-red-500/40 transition-all [color-scheme:dark]"
+                       className="w-full bg-bg-base border border-white/5 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-red-500/40 transition-all [color-scheme:dark] shadow-sm"
                        value={newExpense.expense_date}
                        onChange={e => setNewExpense({ ...newExpense, expense_date: e.target.value })}
                     />
@@ -193,7 +196,7 @@ export default function ExpensesPage() {
 
               <button 
                  onClick={() => {
-                    if (!newExpense.amount || !newExpense.description) return toast.error('Completa los datos');
+                    if (!newExpense.amount || !newExpense.description) return toast.error('Completa los datos obligatorios (Monto y Descripción)');
                     createExpense.mutate({
                        amount: Number(newExpense.amount),
                        description: newExpense.description,
@@ -206,11 +209,11 @@ export default function ExpensesPage() {
                        }
                     });
                  }}
-                 className="w-full bg-red-600 text-white py-6 rounded-[2rem] font-black uppercase tracking-[0.2em] text-[11px] shadow-2xl shadow-red-500/20 active:scale-95 transition-all relative z-10"
+                 className="w-full bg-red-600 text-white py-3.5 rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-red-700 transition-all shadow-xl shadow-red-500/20 active:scale-95 relative z-10 mt-4"
               >
-                 Registrar Salida de Capital
+                 Registrar Salida
               </button>
-              <TrendingDown size={200} className="absolute -bottom-20 -right-20 opacity-[0.02] text-red-500" />
+              <TrendingDown size={150} className="absolute -bottom-10 -right-10 opacity-5 text-red-500" />
            </div>
         </div>
       </div>

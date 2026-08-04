@@ -1,5 +1,5 @@
 'use client';
-import { useOwnerBaseData, useOwnerStats, useTodayAppointments } from '@/hooks/useOwnerData';
+import { useOwnerBaseData, useOwnerStats, useTodayAppointments } from '@/hooks/owner';
 import { 
   LayoutDashboard, 
   TrendingUp, 

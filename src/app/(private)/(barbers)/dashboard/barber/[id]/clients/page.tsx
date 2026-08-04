@@ -1,5 +1,5 @@
 'use client';
-import { useBarberClients } from '@/hooks/useBarberData';
+import { useBarberClients } from '@/hooks/barber';
 import { 
   Users, 
   Search, 

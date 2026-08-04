@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { useClientAppointments, useCancelAppointment } from '@/hooks/useClientData';
+import { useClientAppointments, useCancelAppointment } from '@/hooks/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'next/navigation';
 import { History, Star, Trash2, MessageCircle, Clock, CheckCircle2, Settings, X, Calendar as CalendarIcon, Save, Zap } from 'lucide-react';

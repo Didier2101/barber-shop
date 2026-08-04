@@ -1,3 +1,18 @@
 @import "tailwindcss";
 
+@theme {
+  --color-brand: var(--brand);
+  --color-bg-base: var(--bg-base);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+}
+
+:root {
+  /* Colores principales de la marca (editables por barbería) */
+  --brand: #f59e0b;         /* Color de acento (Amarillo) */
+  --bg-base: #050505;       /* Fondo principal (Negro profundo) */
+  --surface: #111111;       /* Fondo secundario (Tarjetas, Modales) */
+  --surface-hover: #1a1a1a; /* Fondo secundario hover */
+}
+
 @custom-variant dark (&:where(.dark, .dark *));
