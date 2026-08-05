@@ -1,9 +1,10 @@
 'use client';
-import { useRouter } from 'next/navigation';
+
+import Link from 'next/link';
 import { ArrowLeft, ShieldCheck, Scale, UserCheck, Trash2, Mail } from 'lucide-react';
 
 export default function PrivacyPolicy() {
-  const router = useRouter();
+
 
   return (
     <main className="min-h-screen relative overflow-hidden text-white p-4 sm:p-8 pt-28 sm:pt-32 pb-16 sm:pb-20">
@@ -13,9 +14,9 @@ export default function PrivacyPolicy() {
         
         {/* Header */}
         <div className="space-y-6">
-           <button onClick={() => router.back()} className="flex items-center gap-2 bg-white/5 hover:bg-white/10 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">
+           <Link href="/" className="inline-flex items-center gap-2 bg-white/5 hover:bg-white/10 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all w-fit">
               <ArrowLeft size={16} /> Volver
-           </button>
+           </Link>
            <h1 className="text-5xl font-black uppercase tracking-tighter italic">Política de <span className="text-[#f59e0b]">Privacidad</span></h1>
            <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.4em]">Tratamiento de Datos Personales • Ley 1581 de 2012</p>
         </div>

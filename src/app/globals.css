@@ -5,14 +5,36 @@
   --color-bg-base: var(--bg-base);
   --color-surface: var(--surface);
   --color-surface-hover: var(--surface-hover);
+  --color-accent-green: var(--color-accent-green);
+  --color-accent-pink: var(--color-accent-pink);
 }
 
 :root {
-  /* Colores principales de la marca (editables por barbería) */
-  --brand: #f59e0b;         /* Color de acento (Amarillo) */
-  --bg-base: #050505;       /* Fondo principal (Negro profundo) */
-  --surface: #111111;       /* Fondo secundario (Tarjetas, Modales) */
-  --surface-hover: #1a1a1a; /* Fondo secundario hover */
+  --color-bg-lightest: #FFF7EB;
+  --color-bg-surface: #F9F0E0;
+  --color-accent-green: #A2AB73;
+  --color-accent-pink: #CC3A63;
+
+  --brand: var(--color-accent-pink);
+  --bg-base: var(--color-bg-lightest);
+  --surface: var(--color-bg-surface);
+  --surface-hover: #f1e4ce;
 }
 
-@custom-variant dark (&:where(.dark, .dark *));
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 75s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}

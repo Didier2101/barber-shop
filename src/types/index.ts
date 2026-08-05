@@ -27,6 +27,7 @@ export interface Service {
   name: string;
   price: number;
   duration: number;
+  description?: string;
   is_active: boolean;
   created_at: string;
 }
