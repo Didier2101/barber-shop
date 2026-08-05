@@ -282,175 +282,152 @@ export default function BarberBookingPage() {
   );
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ x: '100%' }}
       animate={{ x: 0 }}
       exit={{ x: '100%' }}
       transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-      className="fixed inset-0 z-[120] bg-black flex flex-col overflow-hidden"
+      className="fixed inset-0 z-[120] bg-bg-base flex flex-col overflow-hidden"
     >
-      {/* Header Fijo */}
-      <div className="shrink-0 h-20 border-b border-white/5 bg-black/60 backdrop-blur-xl flex items-center justify-between px-6 z-50 relative">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#f59e0b]/10 text-[#f59e0b] flex items-center justify-center">
-            <Scissors size={20} />
-          </div>
-          <div>
-            <h2 className="text-xl font-black text-white uppercase tracking-tighter italic leading-none">Reservar</h2>
-            <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em] mt-1">Paso 2: Detalles</p>
-          </div>
+      {/* Header */}
+      <div className="shrink-0 h-14 border-b border-accent-green/20 bg-surface/95 backdrop-blur-xl flex items-center justify-between px-6 z-50">
+        <div className="flex items-center gap-2">
+          <Scissors size={16} className="text-brand" />
+          <h2 className="text-base font-black text-zinc-900 uppercase tracking-tighter italic">Reservar</h2>
         </div>
-        <button 
-          onClick={() => router.back()} 
-          className="w-10 h-10 bg-white/5 text-white rounded-full flex items-center justify-center active:scale-90 transition-all"
-        >
+        <button onClick={() => router.back()} className="w-10 h-10 text-zinc-400 flex items-center justify-center active:scale-90 transition-all hover:text-zinc-900">
           <ArrowLeft size={20} />
         </button>
       </div>
 
       {/* Cuerpo Scrollable */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar p-4 lg:p-10 pb-32">
-        <div className="space-y-6 lg:space-y-8 max-w-lg mx-auto">
-          
-          {/* Barber Brief Compacto */}
-          <div className="flex items-center gap-4 lg:gap-5 px-1">
-            <div className="w-16 h-16 lg:w-24 lg:h-24 rounded-2xl lg:rounded-3xl overflow-hidden border-2 border-[#f59e0b]/30 bg-white/5 shrink-0 shadow-xl">
-              {barber?.avatar_url && <img src={barber.avatar_url} alt={`Avatar de ${barber.nickname || barber.name}`} className="w-full h-full object-cover" />}
+      <div className="flex-1 overflow-y-auto custom-scrollbar px-6 pb-20">
+        <div className="max-w-lg mx-auto pt-6 space-y-8">
+
+          {/* Barber Brief */}
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-full overflow-hidden bg-zinc-100 shrink-0">
+              {barber?.avatar_url && <img src={barber.avatar_url} alt={barber.nickname || barber.name} className="w-full h-full object-cover" />}
             </div>
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <div className="flex text-[#f59e0b]">
-                  {[1, 2, 3, 4, 5].map(star => (
-                    <Star key={star} size={10} fill={star <= rating.average ? 'currentColor' : 'none'} className={star <= rating.average ? '' : 'text-white/10'} />
-                  ))}
-                </div>
-                <span className="text-[8px] font-black uppercase text-white/20">{rating.count} reseñas</span>
+            <div>
+              <div className="flex items-center gap-1.5 text-brand mb-0.5">
+                {[1,2,3,4,5].map(star => <Star key={star} size={9} fill={star <= rating.average ? 'currentColor' : 'none'} className={star <= rating.average ? '' : 'text-zinc-200'} />)}
+                <span className="text-[8px] font-black uppercase text-zinc-400 ml-1">{rating.count} reseñas</span>
               </div>
-              <h1 className="text-2xl lg:text-4xl font-black uppercase tracking-tighter leading-none text-white italic">{barber?.nickname || barber?.name}</h1>
-              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[#f59e0b]">Profesional Senior</p>
+              <h1 className="text-2xl font-black uppercase tracking-tighter leading-none text-zinc-900 italic">{barber?.nickname || barber?.name}</h1>
+              <p className="text-[9px] font-black uppercase tracking-widest text-accent-green mt-0.5">Profesional</p>
             </div>
           </div>
 
-          {/* Booking Card Compacta */}
-          <div className="bg-white/[0.03] backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-5 lg:p-8 shadow-2xl space-y-8 lg:space-y-10">
-            <form onSubmit={handleBooking} className="space-y-8 lg:space-y-10">
+          <form onSubmit={handleBooking} className="space-y-8">
 
-              {/* Active Promo Badge */}
-              {activePromo && (
-                <div className="bg-[#f59e0b]/10 border border-[#f59e0b]/30 rounded-[1.5rem] p-4 flex items-center justify-between animate-in zoom-in-95 duration-300">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-xl bg-[#f59e0b] flex items-center justify-center text-black shadow-lg">
-                      <Zap size={14} />
-                    </div>
-                    <div>
-                      <p className="text-[8px] font-black uppercase tracking-[0.3em] text-[#f59e0b]">Promo Activada</p>
-                      <p className="text-[11px] font-black uppercase text-white tracking-tight">{activePromo.name}</p>
-                    </div>
-                  </div>
+            {/* Active Promo Badge */}
+            {activePromo && (
+              <div className="flex items-center gap-3 border-t border-accent-green/10 pt-4">
+                <div className="w-7 h-7 rounded-lg bg-brand flex items-center justify-center text-white shrink-0">
+                  <Zap size={12} />
                 </div>
-              )}
+                <div>
+                  <p className="text-[8px] font-black uppercase tracking-widest text-brand">Promo Activada</p>
+                  <p className="text-[11px] font-black uppercase text-zinc-900 tracking-tight">{activePromo.name}</p>
+                </div>
+              </div>
+            )}
 
-              <div className="space-y-4">
-                <h3 className="text-[9px] lg:text-[11px] font-black uppercase tracking-[0.4em] text-white/30 ml-2">1. Los Servicios</h3>
-                <div className="grid gap-3">
-                  {services.map(s => {
-                    const isSelected = selectedServices.find(x => x.id === s.id);
-                    const isAllowedByPromo = !activePromo?.service_ids || activePromo.service_ids.length === 0 || activePromo.service_ids.includes(s.id);
-
-                    return (
-                      <div
-                        key={s.id}
-                        onClick={() => {
-                          if (activePromo) return; 
-                          toggleService(s);
-                        }}
-                        className={`p-4 lg:p-6 rounded-[1.5rem] lg:rounded-[2rem] border transition-all active:scale-[0.98] 
-                          ${!isAllowedByPromo ? 'opacity-20 cursor-not-allowed' : 'cursor-pointer'} 
-                          ${isSelected ? 'bg-[#f59e0b] border-[#f59e0b] shadow-lg shadow-amber-500/10' : 'bg-white/5 border-white/5 hover:bg-white/10'} 
-                          ${activePromo ? 'pointer-events-none' : ''}`}
-                      >
-                        <div className="flex justify-between items-center">
-                          <div className="space-y-0.5">
-                            <p className={`font-black uppercase text-[11px] lg:text-[13px] tracking-tight ${isSelected ? 'text-black' : 'text-white'}`}>{s.name}</p>
-                            <p className={`text-[9px] font-bold ${isSelected ? 'text-black/60' : 'text-white/30'}`}>{s.duration} min</p>
-                          </div>
-                          <p className={`text-base lg:text-lg font-black italic ${isSelected ? 'text-black' : 'text-[#f59e0b]'}`}>${formatPrice(Number(s.price))}</p>
-                        </div>
+            {/* 1. Servicios */}
+            <div className="space-y-3 border-t border-accent-green/10 pt-6">
+              <h3 className="text-[9px] font-black uppercase tracking-[0.4em] text-zinc-400">1. Los Servicios</h3>
+              <div className="space-y-0">
+                {services.map(s => {
+                  const isSelected = selectedServices.find(x => x.id === s.id);
+                  const isAllowedByPromo = !activePromo?.service_ids || activePromo.service_ids.length === 0 || activePromo.service_ids.includes(s.id);
+                  return (
+                    <div
+                      key={s.id}
+                      onClick={() => { if (activePromo) return; toggleService(s); }}
+                      className={`py-4 border-b border-accent-green/10 flex items-center justify-between transition-all
+                        ${!isAllowedByPromo ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}
+                        ${activePromo ? 'pointer-events-none' : ''}
+                      `}
+                    >
+                      <div>
+                        <p className={`text-sm font-black uppercase tracking-tight ${isSelected ? 'text-brand' : 'text-zinc-900'}`}>{s.name}</p>
+                        <p className="text-[9px] font-bold text-zinc-400">{s.duration} min</p>
                       </div>
-                    )
-                  })}
+                      <div className="flex items-center gap-3">
+                        <p className={`text-base font-black italic ${isSelected ? 'text-brand' : 'text-zinc-500'}`}>${formatPrice(Number(s.price))}</p>
+                        <div className={`w-4 h-4 rounded-full border-2 transition-all ${isSelected ? 'bg-brand border-brand' : 'border-zinc-300'}`} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 2. Fecha */}
+            {selectedServices.length > 0 && (
+              <div className="space-y-3 border-t border-accent-green/10 pt-6 animate-in fade-in duration-300">
+                <h3 className="text-[9px] font-black uppercase tracking-[0.4em] text-zinc-400">2. El Día</h3>
+                <input
+                  type="date"
+                  className={`w-full bg-transparent border border-accent-green/20 rounded-xl p-4 text-[11px] font-black uppercase tracking-widest outline-none focus:border-brand text-zinc-900 transition-all ${activePromo && activePromo.start_date.split('T')[0] === activePromo.end_date.split('T')[0] ? 'opacity-50' : ''}`}
+                  value={selectedDate}
+                  onChange={e => setSelectedDate(e.target.value)}
+                  min={activePromo ? activePromo.start_date.split('T')[0] : new Date().toISOString().split('T')[0]}
+                  max={activePromo ? activePromo.end_date.split('T')[0] : undefined}
+                  disabled={!!(activePromo && activePromo.start_date.split('T')[0] === activePromo.end_date.split('T')[0])}
+                  required
+                />
+              </div>
+            )}
+
+            {/* 3. Hora */}
+            {selectedDate && (
+              <div className="space-y-3 border-t border-accent-green/10 pt-6 animate-in fade-in duration-300">
+                <h3 className="text-[9px] font-black uppercase tracking-[0.4em] text-zinc-400">3. Tu Turno</h3>
+                {fetchingSlots ? (
+                  <div className="flex flex-col items-center py-6 gap-2">
+                    <div className="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+                    <p className="text-[8px] font-black uppercase tracking-widest text-zinc-400">Buscando...</p>
+                  </div>
+                ) : availableSlots.length === 0 ? (
+                  <p className="text-[9px] text-red-500 font-black uppercase tracking-widest py-4">Sin disponibilidad este día. Prueba otra fecha.</p>
+                ) : (
+                  <div className="grid grid-cols-4 gap-2">
+                    {availableSlots.map(time => (
+                      <button
+                        key={time}
+                        type="button"
+                        onClick={() => setSelectedTime(time)}
+                        className={`py-3 rounded-xl text-[10px] font-black transition-all active:scale-90 ${selectedTime === time ? 'bg-brand text-white shadow-md' : 'bg-transparent text-zinc-500 hover:bg-black/5 border border-accent-green/20'}`}
+                      >
+                        {time}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Total + Confirmar */}
+            <div className="border-t border-accent-green/10 pt-6 space-y-6">
+              <div className="flex justify-between items-end">
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-[0.3em] text-zinc-400">Total a Pagar</p>
+                  <p className="text-3xl font-black italic text-brand leading-none tracking-tighter">${formatPrice(discountedPrice)}</p>
                 </div>
+                <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">{totalDuration} min</p>
               </div>
 
-              {selectedServices.length > 0 && (
-                <div className="space-y-4 animate-in fade-in duration-500">
-                  <h3 className="text-[9px] lg:text-[11px] font-black uppercase tracking-[0.4em] text-white/30 ml-2">2. El Día</h3>
-                  <input
-                    type="date"
-                    className={`w-full bg-white/5 border border-white/10 rounded-xl p-4 text-[11px] font-black uppercase tracking-widest outline-none focus:border-[#f59e0b] text-white transition-all ${activePromo && activePromo.start_date.split('T')[0] === activePromo.end_date.split('T')[0] ? 'opacity-50' : 'focus:bg-white/10'}`}
-                    value={selectedDate}
-                    onChange={e => setSelectedDate(e.target.value)}
-                    min={activePromo ? activePromo.start_date.split('T')[0] : new Date().toISOString().split('T')[0]}
-                    max={activePromo ? activePromo.end_date.split('T')[0] : undefined}
-                    disabled={!!(activePromo && activePromo.start_date.split('T')[0] === activePromo.end_date.split('T')[0])}
-                    required
-                  />
-                </div>
-              )}
-
-              {selectedDate && (
-                <div className="space-y-4 animate-in fade-in duration-500">
-                  <h3 className="text-[9px] lg:text-[11px] font-black uppercase tracking-[0.4em] text-white/30 ml-2">3. Tu Turno</h3>
-                  {fetchingSlots ? (
-                    <div className="flex flex-col items-center py-6 gap-2">
-                       <div className="w-6 h-6 border-2 border-[#f59e0b] border-t-transparent rounded-full animate-spin" />
-                       <p className="text-[8px] font-black uppercase tracking-widest text-white/20">Buscando...</p>
-                    </div>
-                  ) : availableSlots.length === 0 ? (
-                    <div className="py-8 px-5 bg-red-500/5 rounded-[2rem] border border-red-500/10 text-center space-y-2">
-                      <p className="text-[10px] text-red-500 font-black uppercase tracking-widest">Sin disponibilidad</p>
-                      <p className="text-[8px] text-red-500/50 font-bold uppercase tracking-widest leading-relaxed">Prueba con otra fecha o barbero.</p>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-4 gap-2">
-                      {availableSlots.map(time => (
-                        <button
-                          key={time}
-                          type="button"
-                          onClick={() => setSelectedTime(time)}
-                          className={`py-3 rounded-xl text-[10px] font-black transition-all active:scale-90 ${selectedTime === time ? 'bg-white text-black shadow-lg' : 'bg-white/5 text-white/30 hover:bg-white/10'}`}
-                        >
-                          {time}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="pt-6 lg:pt-10 border-t border-white/5 space-y-6 lg:space-y-8">
-                <div className="flex justify-between items-end px-1">
-                  <div className="space-y-1">
-                    <p className="text-[9px] font-black uppercase tracking-[0.3em] text-white/30">Total a Pagar</p>
-                    <div className="flex items-baseline gap-2">
-                      <p className="text-3xl lg:text-4xl font-black italic text-[#f59e0b] leading-none tracking-tighter">${formatPrice(discountedPrice)}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                     <p className="text-[9px] font-black text-white/20 uppercase tracking-widest">{totalDuration} min</p>
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={!selectedTime || selectedServices.length === 0}
-                  className="w-full bg-[#f59e0b] text-black py-5 rounded-[2rem] font-black uppercase tracking-[0.4em] text-[11px] transition-all shadow-xl shadow-amber-500/10 active:scale-95 disabled:opacity-10"
-                >
-                  Confirmar Mi Cita
-                </button>
-              </div>
-            </form>
-          </div>
+              <button
+                type="submit"
+                disabled={!selectedTime || selectedServices.length === 0}
+                className="w-full bg-brand hover:bg-accent-green text-white py-5 rounded-[2rem] font-black uppercase tracking-[0.4em] text-[11px] transition-all shadow-xl shadow-brand/20 active:scale-95 disabled:opacity-20"
+              >
+                Confirmar Mi Cita
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </motion.div>

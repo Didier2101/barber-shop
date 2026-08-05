@@ -43,73 +43,64 @@ export default function SelectBarberPage() {
       animate={{ x: 0 }}
       exit={{ x: '100%' }}
       transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-      className="fixed inset-0 z-[120] bg-black flex flex-col overflow-hidden"
+      className="fixed inset-0 z-[120] bg-bg-base flex flex-col overflow-hidden"
     >
       {/* Header Fijo */}
-      <div className="shrink-0 h-20 border-b border-white/5 bg-black/60 backdrop-blur-xl flex items-center justify-between px-6 z-50 relative">
+      <div className="shrink-0 h-14 border-b border-accent-green/20 bg-surface/95 backdrop-blur-xl flex items-center justify-between px-6 z-50 relative">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#f59e0b]/10 text-[#f59e0b] flex items-center justify-center">
-            <Scissors size={20} />
-          </div>
+          <Scissors size={16} className="text-brand" />
           <div>
-            <h2 className="text-xl font-black text-white uppercase tracking-tighter italic leading-none">Reservar</h2>
-            <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em] mt-1">Paso 1: Elige tu Maestro</p>
+            <h2 className="text-base font-black text-zinc-900 uppercase tracking-tighter italic leading-none">Reservar</h2>
           </div>
         </div>
         <button
           onClick={() => router.back()}
-          className="w-10 h-10 bg-white/5 text-white rounded-full flex items-center justify-center active:scale-90 transition-all"
+          className="w-10 h-10 text-zinc-400 flex items-center justify-center active:scale-90 transition-all hover:text-zinc-900"
         >
           <ArrowLeft size={20} />
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto custom-scrollbar p-4 lg:p-10 pb-32">
-        <div className="space-y-10 max-w-lg mx-auto">
-          <div className="space-y-2">
-            <p className="text-[#f59e0b] text-[10px] font-black uppercase tracking-[0.4em]">Reserva tu Experiencia</p>
-            <h1 className="text-4xl font-black uppercase tracking-tighter italic leading-none text-white">Elige tu <span className="text-[#f59e0b]">Maestro</span></h1>
-            <p className="text-white/30 text-[9px] font-black uppercase tracking-[0.3em]">Selecciona al barbero de tu preferencia</p>
-          </div>
+      <div className="flex-1 overflow-y-auto custom-scrollbar px-6 pb-20">
+        <div className="max-w-lg mx-auto pt-6 space-y-1">
+          <h1 className="text-3xl font-black uppercase tracking-tighter italic leading-none text-zinc-900 mb-6">Elige tu <span className="text-brand font-light">Especialista</span></h1>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="border-t border-accent-green/10">
             {barbers.map(barber => (
-              <div key={barber.id} className="bg-white/[0.03] backdrop-blur-3xl border border-white/5 rounded-[2.5rem] p-6 space-y-6 relative hover:bg-white/[0.06] transition-all group">
-                <div className="flex items-center gap-5">
-                  <div className="w-20 h-20 rounded-2xl overflow-hidden bg-white/5 border border-white/10 shrink-0">
-                    {barber.avatar_url ? (
-                      <img src={barber.avatar_url} alt={barber.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-white/10">
-                        <User size={30} />
-                      </div>
-                    )}
-                  </div>
+              <div key={barber.id} className="border-b border-accent-green/10 py-5 flex items-center gap-4">
+                {/* Avatar */}
+                <div className="w-14 h-14 rounded-full overflow-hidden bg-zinc-100 shrink-0">
+                  {barber.avatar_url ? (
+                    <img src={barber.avatar_url} alt={barber.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-zinc-400">
+                      <User size={24} />
+                    </div>
+                  )}
+                </div>
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-start">
-                      <h3 className="text-xl font-black uppercase tracking-tighter truncate leading-none mb-1 text-white">{barber.nickname || barber.name}</h3>
-                      <div className={`px-2 py-0.5 rounded-lg text-[7px] font-black uppercase tracking-widest shrink-0 ${barber.is_active ? 'bg-emerald-500/20 text-emerald-500' : 'bg-red-500/20 text-red-500'}`}>
-                        {barber.is_active ? 'ON' : 'OFF'}
-                      </div>
-                    </div>
-                    <p className="text-[9px] font-bold text-white/20 uppercase tracking-widest truncate">{barber.name}</p>
-                    <div className="flex items-center gap-1.5 text-[#f59e0b] mt-2">
-                      <Star size={12} fill="currentColor" />
-                      <span className="text-[9px] font-black tracking-[0.2em] uppercase">Master Barber</span>
-                    </div>
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-black uppercase tracking-tighter text-zinc-900 truncate">{barber.nickname || barber.name}</h3>
+                    <span className={`text-[6px] font-black uppercase tracking-widest shrink-0 ${barber.is_active ? 'text-emerald-500' : 'text-red-400'}`}>
+                      {barber.is_active ? '● Activo' : '● Inactivo'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1 text-brand mt-0.5">
+                    <Star size={9} fill="currentColor" />
+                    <span className="text-[8px] font-black tracking-widest uppercase">Profesional</span>
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-white/5 flex gap-3">
-                  <button
-                    disabled={!barber.is_active}
-                    onClick={() => router.push(`/dashboard/client/${clientId}/reservas/barber/${barber.id}${promoId ? `?promo_id=${promoId}` : ''}`)}
-                    className={`flex-1 py-4 rounded-2xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-2 ${barber.is_active ? 'bg-[#f59e0b] text-black' : 'bg-zinc-800 text-white/20'}`}
-                  >
-                    <Calendar size={16} /> Reservar
-                  </button>
-                </div>
+                {/* Acción */}
+                <button
+                  disabled={!barber.is_active}
+                  onClick={() => router.push(`/dashboard/client/${clientId}/reservas/barber/${barber.id}${promoId ? `?promo_id=${promoId}` : ''}`)}
+                  className={`shrink-0 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all ${barber.is_active ? 'bg-brand text-white hover:bg-accent-green active:scale-95' : 'bg-zinc-100 text-zinc-400'}`}
+                >
+                  <Calendar size={13} /> Reservar
+                </button>
               </div>
             ))}
           </div>

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-import { Camera, Mail, Settings, X, Shield, User, Phone, Star, Scissors } from 'lucide-react';
+import { Camera, Mail, Settings, Shield, User, Phone, Star, Scissors, ChevronLeft } from 'lucide-react';
 import { useGlobalStore } from '@/store/useGlobalStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Profile } from '@/types';
@@ -204,21 +204,25 @@ export function FullProfileView({ profileId }: FullProfileViewProps) {
     const { value: password, isConfirmed } = await Swal.fire({
       title: 'Desactivar Cuenta',
       html: `
-        <p style="margin-bottom: 1rem; color: #fff;">Para continuar, por favor ingresa tu contraseña.</p>
-        <div style="position: relative; display: flex; align-items: center; justify-content: center; width: 100%; max-width: 320px; margin: 0 auto;">
-          <input type="password" id="swal-password" class="swal2-input" placeholder="Tu contraseña" style="width: 100%; margin: 0; padding-right: 40px; box-sizing: border-box;" autocapitalize="off" autocorrect="off">
-          <button type="button" id="swal-eye" style="position: absolute; right: 10px; background: none; border: none; cursor: pointer; color: #999; display: flex; align-items: center; padding: 5px; outline: none;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+        <p style="margin-bottom: 1rem; color: #71717a; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em;">Para continuar, ingresa tu contraseña.</p>
+        <div style="position: relative; display: flex; align-items: center; width: 100%;">
+          <input type="password" id="swal-password" class="swal2-input" placeholder="Tu contraseña" style="width: 100%; margin: 0; padding-right: 40px; box-sizing: border-box; background: transparent; border: 1px solid rgba(162,171,115,0.2); border-radius: 12px; color: #f4f4f5; font-size: 0.875rem;" autocapitalize="off" autocorrect="off">
+          <button type="button" id="swal-eye" style="position: absolute; right: 10px; background: none; border: none; cursor: pointer; color: #71717a; display: flex; align-items: center; padding: 5px; outline: none;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
           </button>
         </div>
       `,
-      icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#ef4444',
-      confirmButtonText: 'Confirmar y Desactivar',
+      confirmButtonText: 'Desactivar',
       cancelButtonText: 'Cancelar',
-      background: '#111111',
-      color: '#fff',
+      background: '#0a0a0a',
+      color: '#f4f4f5',
+      customClass: {
+        popup: 'rounded-2xl border border-white/10',
+        confirmButton: 'rounded-xl text-xs font-black uppercase tracking-widest px-6 py-3',
+        cancelButton: 'rounded-xl text-xs font-black uppercase tracking-widest px-6 py-3 bg-transparent border border-white/10 text-zinc-400',
+      },
       didOpen: () => {
         const eyeBtn = document.getElementById('swal-eye');
         const input = document.getElementById('swal-password') as HTMLInputElement;
@@ -226,12 +230,12 @@ export function FullProfileView({ profileId }: FullProfileViewProps) {
           eyeBtn.addEventListener('click', () => {
             if (input.type === 'password') {
               input.type = 'text';
-              eyeBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/></svg>';
-              eyeBtn.style.color = '#fff';
+              eyeBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/></svg>';
+              eyeBtn.style.color = '#f4f4f5';
             } else {
               input.type = 'password';
-              eyeBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>';
-              eyeBtn.style.color = '#999';
+              eyeBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>';
+              eyeBtn.style.color = '#71717a';
             }
           });
         }
@@ -290,36 +294,22 @@ export function FullProfileView({ profileId }: FullProfileViewProps) {
   }
 
   return (
-    <div className="font-sans pb-32 relative">
-      {/* ── FONDO DINÁMICO DEL PERFIL (WALLPAPER) ─────────────────────────── */}
-      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden rounded-t-[2.5rem]">
-        {barber?.avatar_url ? (
-          <img
-            src={barber.avatar_url}
-            alt="Wallpaper Perfil"
-            className="w-full h-full object-cover opacity-20 transition-all duration-700 blur-sm"
-          />
-        ) : (
-          <div className="w-full h-full bg-bg-base" />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-bg-base via-bg-base/90 to-transparent" />
-      </div>
-
+    <div className="font-sans pb-32 relative px-6 md:px-8">
       <div className="mx-auto space-y-6 relative z-10">
 
         {/* Profile Card Principal */}
-        <div className="bg-surface/80 backdrop-blur-xl border border-white/5 rounded-3xl p-8 flex flex-col items-center text-center space-y-4 relative overflow-hidden shadow-2xl">
+        <div className="flex flex-col items-center text-center space-y-4 relative overflow-hidden pt-4 pb-2">
 
           <div className="relative">
-            <div className="w-28 h-28 rounded-full border-4 border-surface shadow-2xl overflow-hidden bg-bg-base flex items-center justify-center ring-2 ring-brand/20">
+            <div className="w-28 h-28 rounded-full border-4 border-white shadow-sm overflow-hidden bg-bg-base flex items-center justify-center ring-2 ring-brand/20">
               {barber?.avatar_url ? (
                 <img src={barber.avatar_url} alt={`Foto de ${barber.name}`} className="w-full h-full object-cover" />
               ) : (
-                <User size={40} className="text-white/20" />
+                <User size={40} className="text-zinc-300" />
               )}
             </div>
             {isOwnerOfProfile && (
-              <label className="absolute bottom-0 right-0 bg-brand text-black p-2.5 rounded-full border-2 border-surface cursor-pointer active:scale-90 transition-all shadow-lg hover:scale-105">
+              <label className="absolute bottom-0 right-0 bg-brand text-white p-2.5 rounded-full border-2 border-white cursor-pointer active:scale-90 transition-all shadow-lg hover:scale-105">
                 <Camera size={16} />
                 <input type="file" className="hidden" accept="image/*" onChange={handlePhotoUpload} disabled={uploading} />
               </label>
@@ -332,26 +322,26 @@ export function FullProfileView({ profileId }: FullProfileViewProps) {
           </div>
 
           <div>
-            <h2 className="text-2xl font-bold tracking-tight text-white uppercase leading-none mb-2">{barber?.nickname || barber?.name}</h2>
+            <h2 className="text-2xl font-bold tracking-tight text-zinc-900 uppercase leading-none mb-2">{barber?.nickname || barber?.name}</h2>
             <p className="text-[10px] font-bold text-brand uppercase tracking-widest">
               {barber?.role === 'client' ? 'Cliente VIP' : (barber?.role === 'owner' ? 'Propietario / Master' : 'Artesano Profesional')}
             </p>
           </div>
 
-          <div className="flex gap-12 pt-6 w-full justify-center border-t border-white/5 mt-4">
+          <div className="flex gap-12 pt-6 w-full justify-center border-t border-accent-green/10 mt-4">
             <div className="text-center">
-              <p className="text-2xl font-bold text-white leading-none">{barber?.services_completed || 0}</p>
-              <p className="text-[9px] font-medium uppercase tracking-wider text-white/40 mt-1">Servicios</p>
+              <p className="text-2xl font-bold text-zinc-900 leading-none">{barber?.services_completed || 0}</p>
+              <p className="text-[9px] font-medium uppercase tracking-wider text-zinc-500 mt-1">Servicios</p>
             </div>
             {barber?.role !== 'client' && (
               <>
-                <div className="w-px h-10 bg-white/5" />
+                <div className="w-px h-10 bg-accent-green/10" />
                 <div className="text-center">
                   <div className="flex items-center gap-1.5 justify-center">
                     <Star size={14} className="text-brand fill-brand" />
-                    <p className="text-2xl font-bold text-white leading-none">{rating.average > 0 ? rating.average.toFixed(1) : '5.0'}</p>
+                    <p className="text-2xl font-bold text-zinc-900 leading-none">{rating.average > 0 ? rating.average.toFixed(1) : '5.0'}</p>
                   </div>
-                  <p className="text-[9px] font-medium uppercase tracking-wider text-white/40 mt-1">Rating</p>
+                  <p className="text-[9px] font-medium uppercase tracking-wider text-zinc-500 mt-1">Rating</p>
                 </div>
               </>
             )}
@@ -360,9 +350,9 @@ export function FullProfileView({ profileId }: FullProfileViewProps) {
 
         {/* Biografía */}
         {barber?.bio && (
-          <div className="bg-surface/80 backdrop-blur-xl border border-white/5 rounded-2xl p-6 space-y-3 shadow-xl">
+          <div className="border-t border-accent-green/10 pt-6 space-y-3">
             <h3 className="text-[10px] font-bold uppercase tracking-widest text-brand">Sobre Mí</h3>
-            <p className="text-sm leading-relaxed text-white/80 italic">
+            <p className="text-sm leading-relaxed text-zinc-700 italic">
               &quot;{barber.bio}&quot;
             </p>
           </div>
@@ -370,21 +360,22 @@ export function FullProfileView({ profileId }: FullProfileViewProps) {
 
         {/* Especialidades / Servicios */}
         {barber?.role !== 'client' && (
-          <div className="bg-surface/80 backdrop-blur-xl border border-white/5 rounded-2xl p-6 shadow-xl space-y-4">
+          <div className="border-t border-accent-green/10 pt-6 space-y-4">
             <div className="flex items-center gap-2 mb-2">
               <Scissors size={18} className="text-brand" />
               <h3 className="text-[10px] font-bold uppercase tracking-widest text-brand">Especialidades & Servicios</h3>
             </div>
 
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-1.5 text-zinc-800 text-sm font-medium lowercase">
               {barberServicesList.length > 0 ? (
                 barberServicesList.map((service, idx) => (
-                  <div key={idx} className="bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg text-xs font-bold text-white uppercase tracking-wider">
-                    {service.name}
-                  </div>
+                  <span key={idx} className="flex items-center gap-1.5">
+                    <span>{service.name}</span>
+                    {idx < barberServicesList.length - 1 && <span className="text-zinc-300 font-bold text-xs">•</span>}
+                  </span>
                 ))
               ) : (
-                <p className="text-xs text-white/40 italic">No hay especialidades registradas.</p>
+                <span className="text-zinc-500 italic">No hay especialidades registradas.</span>
               )}
             </div>
           </div>
@@ -392,25 +383,21 @@ export function FullProfileView({ profileId }: FullProfileViewProps) {
 
         {/* Detalles de Contacto */}
         {canViewContact && (
-          <div className={`grid grid-cols-1 ${barber?.role !== 'client' ? 'md:grid-cols-2' : ''} gap-4`}>
+          <div className="border-t border-accent-green/10 pt-6 space-y-4">
             {barber?.role !== 'client' && (
-              <div className="bg-surface/80 backdrop-blur-xl border border-white/5 rounded-2xl p-6 flex items-center gap-4 shadow-xl">
-                <div className="w-12 h-12 bg-brand/10 text-brand rounded-xl flex items-center justify-center shrink-0">
-                  <Mail size={20} />
-                </div>
+              <div className="flex items-center gap-4 border-b border-accent-green/10 pb-4">
+                <Mail size={16} className="text-brand shrink-0" />
                 <div className="min-w-0">
-                  <p className="text-[9px] font-medium uppercase tracking-wider text-white/40 leading-none mb-1">Email</p>
-                  <p className="text-sm font-semibold text-white/90 truncate">{barber?.email || '---'}</p>
+                  <p className="text-[9px] font-medium uppercase tracking-wider text-zinc-500 leading-none mb-1">Email</p>
+                  <p className="text-sm font-semibold text-zinc-900 truncate">{barber?.email || '---'}</p>
                 </div>
               </div>
             )}
-            <div className="bg-surface/80 backdrop-blur-xl border border-white/5 rounded-2xl p-6 flex items-center gap-4 shadow-xl">
-              <div className="w-12 h-12 bg-emerald-500/10 text-emerald-500 rounded-xl flex items-center justify-center shrink-0">
-                <Phone size={20} />
-              </div>
+            <div className="flex items-center gap-4">
+              <Phone size={16} className="text-emerald-500 shrink-0" />
               <div className="min-w-0">
-                <p className="text-[9px] font-medium uppercase tracking-wider text-white/40 leading-none mb-1">WhatsApp</p>
-                <p className="text-sm font-semibold text-white/90">{barber?.phone || '---'}</p>
+                <p className="text-[9px] font-medium uppercase tracking-wider text-zinc-500 leading-none mb-1">WhatsApp</p>
+                <p className="text-sm font-semibold text-zinc-900">{barber?.phone || '---'}</p>
               </div>
             </div>
           </div>
@@ -421,21 +408,19 @@ export function FullProfileView({ profileId }: FullProfileViewProps) {
           <div className="space-y-4 pt-4">
             <button
               onClick={() => setIsSettingsOpen(true)}
-              className="w-full bg-brand text-black py-4 rounded-xl font-bold uppercase tracking-widest text-xs flex items-center justify-center gap-2 active:scale-95 transition-all shadow-xl shadow-brand/10 hover:bg-brand/90"
+              className="w-full bg-brand text-white py-4 rounded-xl font-bold uppercase tracking-widest text-xs flex items-center justify-center gap-2 active:scale-95 transition-all shadow-xl shadow-brand/10 hover:bg-accent-green"
             >
               <Settings size={16} />
               Editar Mi Perfil
             </button>
 
-            <div className="bg-surface/50 border border-red-500/10 rounded-2xl p-6 space-y-4 text-center mt-8">
-              <div className="flex items-center gap-2 text-red-500/60 justify-center">
-                <Shield size={16} />
-                <p className="text-[10px] font-bold uppercase tracking-widest">Zona de Peligro</p>
-              </div>
+            <div className="border-t border-accent-green/10 pt-6 space-y-4">
+              <p className="text-[9px] font-black text-red-500 uppercase tracking-[0.3em] italic">Zona de Peligro</p>
               <button
                 onClick={handleDeleteAccount}
-                className="w-full py-3 rounded-xl font-bold uppercase tracking-widest text-[10px] border transition-all bg-bg-base border-red-500/20 text-red-500/80 hover:bg-red-500/10 hover:text-red-400"
+                className="w-full py-3 font-bold uppercase tracking-widest text-[10px] border-b border-red-500/20 text-red-500 hover:text-red-600 transition-all text-left flex items-center gap-2 pb-4"
               >
+                <Shield size={14} />
                 Desactivar Cuenta Permanentemente
               </button>
             </div>
@@ -446,7 +431,7 @@ export function FullProfileView({ profileId }: FullProfileViewProps) {
             <div className="pt-6 space-y-3">
               <button
                 onClick={() => router.push(`/dashboard/client/${currentUser?.id}/reservas/barber/${profileId}`)}
-                className="w-full bg-brand text-black py-4 rounded-xl font-bold uppercase tracking-widest text-xs shadow-xl shadow-brand/20 active:scale-95 transition-all flex items-center justify-center gap-2 hover:bg-brand/90"
+                className="w-full bg-brand text-white py-4 rounded-xl font-bold uppercase tracking-widest text-xs shadow-xl shadow-brand/20 active:scale-95 transition-all flex items-center justify-center gap-2 hover:bg-accent-green"
               >
                 <Settings size={16} className="rotate-90" />
                 Agendar con {barber?.nickname || barber?.name}
@@ -460,90 +445,85 @@ export function FullProfileView({ profileId }: FullProfileViewProps) {
       <AnimatePresence>
         {isSettingsOpen && (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             className="fixed inset-0 z-[999] flex flex-col bg-bg-base overflow-hidden"
           >
             {/* Header del Modal */}
-            <div className="shrink-0 h-20 border-b bg-surface/90 border-white/5 backdrop-blur-2xl flex items-center justify-between px-6 z-10">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-brand/10 text-brand flex items-center justify-center">
-                  <Settings size={20} />
-                </div>
-                <h2 className="text-lg font-bold text-white uppercase tracking-tight">Configuración</h2>
-              </div>
+            <div className="shrink-0 h-14 border-b bg-surface/95 border-accent-green/20 backdrop-blur-2xl flex items-center justify-between px-6 z-10">
               <button
                 onClick={() => setIsSettingsOpen(false)}
-                className="w-10 h-10 bg-white/5 text-white/60 hover:text-white hover:bg-white/10 rounded-full flex items-center justify-center transition-all active:scale-90"
+                className="w-10 h-10 text-zinc-400 hover:text-zinc-900 flex items-center justify-center transition-all active:scale-90"
               >
-                <X size={20} />
+                <ChevronLeft size={20} />
               </button>
+              <h2 className="text-base font-black text-zinc-900 uppercase tracking-tight">Configuración</h2>
+              <div className="w-10" />
             </div>
 
             {/* Cuerpo del Modal */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar bg-transparent pb-32">
-              <div className="max-w-3xl mx-auto p-6 sm:p-10 space-y-8">
+            <div className="flex-1 overflow-y-auto custom-scrollbar bg-transparent">
+              <div className="max-w-3xl mx-auto px-6 pt-6 pb-20 space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
                   <div className="space-y-2">
-                    <label className="text-[10px] font-medium text-white/40 uppercase tracking-wider ml-1">Nombre Real</label>
-                    <input type="text" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} className="w-full bg-surface border border-white/5 text-white rounded-xl px-4 py-3 text-sm outline-none focus:border-brand transition-all shadow-sm" />
+                    <label className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider">Nombre Real</label>
+                    <input type="text" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} className="w-full bg-transparent border border-accent-green/20 text-zinc-900 rounded-xl px-4 py-3 text-sm outline-none focus:border-brand transition-all" />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-medium text-white/40 uppercase tracking-wider ml-1">Apodo / Marca</label>
-                    <input type="text" value={editForm.nickname} onChange={(e) => setEditForm({ ...editForm, nickname: e.target.value })} className="w-full bg-surface border border-white/5 text-white rounded-xl px-4 py-3 text-sm outline-none focus:border-brand transition-all shadow-sm" placeholder="Ej: Barber Master" />
+                    <label className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider">Apodo / Marca</label>
+                    <input type="text" value={editForm.nickname} onChange={(e) => setEditForm({ ...editForm, nickname: e.target.value })} className="w-full bg-transparent border border-accent-green/20 text-zinc-900 rounded-xl px-4 py-3 text-sm outline-none focus:border-brand transition-all" placeholder="Ej: Barber Master" />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-medium text-white/40 uppercase tracking-wider ml-1">WhatsApp</label>
-                    <input type="text" value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} className="w-full bg-surface border border-white/5 text-white rounded-xl px-4 py-3 text-sm outline-none focus:border-brand transition-all shadow-sm" />
+                    <label className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider">WhatsApp</label>
+                    <input type="text" value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} className="w-full bg-transparent border border-accent-green/20 text-zinc-900 rounded-xl px-4 py-3 text-sm outline-none focus:border-brand transition-all" />
                   </div>
                 </div>
 
                 {barber?.role !== 'client' && (
-                  <div className="space-y-6 pt-4">
+                  <div className="space-y-6 border-t border-accent-green/10 pt-6">
                     <div className="space-y-2">
-                      <label className="text-[10px] font-medium text-white/40 uppercase tracking-wider ml-1">Dirección / Local</label>
-                      <input type="text" value={editForm.address} onChange={(e) => setEditForm({ ...editForm, address: e.target.value })} className="w-full bg-surface border border-white/5 text-white rounded-xl px-4 py-3 text-sm outline-none focus:border-brand transition-all shadow-sm" />
+                      <label className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider">Dirección / Local</label>
+                      <input type="text" value={editForm.address} onChange={(e) => setEditForm({ ...editForm, address: e.target.value })} className="w-full bg-transparent border border-accent-green/20 text-zinc-900 rounded-xl px-4 py-3 text-sm outline-none focus:border-brand transition-all" />
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[10px] font-medium text-white/40 uppercase tracking-wider ml-1">Bio / Descripción</label>
+                      <label className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider">Bio / Descripción</label>
                       <textarea
                         value={editForm.bio}
                         onChange={(e) => setEditForm({ ...editForm, bio: e.target.value })}
-                        className="w-full bg-surface border border-white/5 text-white rounded-xl px-4 py-3 text-sm outline-none focus:border-brand transition-all min-h-[100px] resize-none shadow-sm"
+                        className="w-full bg-transparent border border-accent-green/20 text-zinc-900 rounded-xl px-4 py-3 text-sm outline-none focus:border-brand transition-all min-h-[100px] resize-none"
                       />
                     </div>
                   </div>
                 )}
 
-                <button onClick={handleUpdateProfile} className="w-full bg-brand text-black py-4 rounded-xl font-bold uppercase tracking-widest text-xs mt-8 shadow-xl hover:bg-brand/90 transition-all active:scale-95 disabled:opacity-50">
+                <button onClick={handleUpdateProfile} className="w-full bg-brand text-white py-4 rounded-xl font-bold uppercase tracking-widest text-xs mt-8 shadow-xl shadow-brand/20 hover:bg-accent-green transition-all active:scale-95 disabled:opacity-50">
                   GUARDAR CAMBIOS
                 </button>
 
-                <div className="h-px bg-white/5 my-10" />
 
-                <div className="space-y-6">
-                  <h3 className="text-xs font-bold text-white uppercase tracking-widest">Seguridad de la Cuenta</h3>
-                  <div className="space-y-6 bg-surface p-6 rounded-2xl border border-white/5">
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-medium text-white/40 uppercase tracking-wider ml-1">Contraseña Actual</label>
-                        <input type="password" placeholder="••••••••" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} className="w-full bg-bg-base border border-white/5 text-white rounded-xl px-4 py-3 text-sm outline-none focus:border-brand transition-all shadow-sm" />
-                      </div>
 
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-medium text-white/40 uppercase tracking-wider ml-1">Nueva Contraseña</label>
-                        <input type="password" placeholder="••••••••" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="w-full bg-bg-base border border-white/5 text-white rounded-xl px-4 py-3 text-sm outline-none focus:border-brand transition-all shadow-sm" />
-                      </div>
+                <div className="space-y-6 border-t border-accent-green/10 pt-6">
+                  <h3 className="text-xs font-bold text-zinc-900 uppercase tracking-widest">Seguridad de la Cuenta</h3>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider">Contraseña Actual</label>
+                      <input type="password" placeholder="••••••••" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} className="w-full bg-transparent border border-accent-green/20 text-zinc-900 rounded-xl px-4 py-3 text-sm outline-none focus:border-brand transition-all" />
+                    </div>
 
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-medium text-white/40 uppercase tracking-wider ml-1">Confirmar Nueva Contraseña</label>
-                        <div className="flex flex-col sm:flex-row gap-3">
-                          <input type="password" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="flex-1 bg-bg-base border border-white/5 text-white rounded-xl px-4 py-3 text-sm outline-none focus:border-brand transition-all shadow-sm" />
-                          <button onClick={handleChangePassword} className="px-6 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all bg-brand text-black hover:bg-brand/90 shadow-xl shadow-brand/10">Actualizar</button>
-                        </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider">Nueva Contraseña</label>
+                      <input type="password" placeholder="••••••••" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="w-full bg-transparent border border-accent-green/20 text-zinc-900 rounded-xl px-4 py-3 text-sm outline-none focus:border-brand transition-all" />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider">Confirmar Nueva Contraseña</label>
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        <input type="password" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="flex-1 bg-transparent border border-accent-green/20 text-zinc-900 rounded-xl px-4 py-3 text-sm outline-none focus:border-brand transition-all" />
+                        <button onClick={handleChangePassword} className="px-6 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all bg-brand text-white hover:bg-accent-green">Actualizar</button>
                       </div>
                     </div>
                   </div>

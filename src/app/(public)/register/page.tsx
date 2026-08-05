@@ -100,7 +100,7 @@ export default function Register() {
             <div className="hidden lg:block self-center">
               <div className="max-w-xl">
                 <div className="inline-flex items-center justify-center w-16 h-16 bg-brand rounded-2xl shadow-lg mb-6">
-                  <Flower2 size={28} className="text-black" />
+                  <Flower2 size={28} className="text-white" />
                 </div>
                 <p className="text-[10px] uppercase tracking-[0.32em] text-brand ml-1 mb-3 font-bold">Reserva en segundos</p>
                 <h1 className="text-zinc-900 text-6xl xl:text-7xl font-black leading-[0.95] tracking-tight uppercase italic">
@@ -204,7 +204,7 @@ export default function Register() {
                     className="w-full bg-brand hover:bg-accent-green hover:text-white text-white h-14 rounded-2xl font-black uppercase tracking-widest text-[11px] transition-all flex items-center justify-center gap-3 active:scale-[0.98] disabled:opacity-50 shadow-xl shadow-brand/20"
                   >
                     {isSubmitting ? (
-                      <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     ) : (
                       <>
                         CREAR MI CUENTA

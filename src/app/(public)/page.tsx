@@ -56,6 +56,10 @@ export default function Home() {
       if (session) {
         setIsLoggedIn(true);
         setUserId(session.user.id);
+      } else {
+        setIsLoggedIn(false);
+        setUserId(null);
+        document.cookie = 'barbershop-auth=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
       }
     }
     
@@ -80,7 +84,7 @@ export default function Home() {
     <main className="min-h-screen text-zinc-900 overflow-hidden font-sans selection:bg-brand selection:text-white">
       
       <section 
-        className="relative h-screen w-full pt-8 flex items-end bg-cover bg-center bg-no-repeat bg-fixed"
+        className="relative min-h-screen h-auto w-full pt-8 flex items-end bg-cover bg-center bg-no-repeat bg-fixed"
         style={{ backgroundImage: "url('https://images.unsplash.com/photo-1540555700478-4be289fbecef?q=80&w=1000')" }}
       >
         <div className="absolute inset-0 bg-bg-base/90" />
@@ -148,7 +152,7 @@ export default function Home() {
       </section>
 
       {activePromos.length > 0 && (
-        <section className="h-screen bg-surface relative overflow-hidden flex flex-col justify-end">
+        <section className="min-h-screen h-auto bg-surface relative overflow-hidden flex flex-col justify-end py-12">
           <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[150vw] h-96 bg-bg-base rounded-[100%] blur-[80px] -z-10"></div>
           
           <div className="max-w-7xl mx-auto px-6 w-full flex flex-col h-full justify-end">
@@ -212,31 +216,31 @@ export default function Home() {
       )}
 
       {loyalty && loyalty.is_enabled && (
-        <section className="py-32 bg-bg-base relative overflow-hidden">
+        <section className="py-12 md:py-32 bg-bg-base relative overflow-hidden">
           <div className="max-w-6xl mx-auto px-6">
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }}
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
               transition={{ duration: 0.8 }}
-              className="bg-accent-green rounded-[40px] p-10 md:p-16 relative overflow-hidden text-white shadow-2xl shadow-accent-green/20"
+              className="bg-accent-green rounded-3xl md:rounded-[40px] p-6 sm:p-10 md:p-16 relative overflow-hidden text-white shadow-2xl shadow-accent-green/20"
             >
                 <div className="absolute top-0 right-0 w-full h-full opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 100% 0%, #ffffff 0%, transparent 50%)' }}></div>
                 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center relative z-10">
-                  <div className="space-y-8">
-                      <div className="inline-flex items-center gap-3 bg-white/20 backdrop-blur-md px-6 py-2 rounded-full border border-white/30">
-                        <Sparkles size={16} />
-                        <span className="text-xs font-bold uppercase tracking-widest">Rewards Club</span>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-12 items-center relative z-10">
+                  <div className="space-y-4 md:space-y-8">
+                      <div className="inline-flex items-center gap-2 md:gap-3 bg-white/20 backdrop-blur-md px-4 md:px-6 py-1.5 md:py-2 rounded-full border border-white/30">
+                        <Sparkles size={14} className="md:w-4 md:h-4" />
+                        <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest">Rewards Club</span>
                       </div>
                       
-                      <h2 className="text-5xl md:text-6xl font-black tracking-tighter leading-tight">
+                      <h2 className="text-4xl md:text-6xl font-black tracking-tighter leading-tight">
                         Tu Belleza <br />
                         <span className="font-serif italic font-light">Te Premia</span>
                       </h2>
                       
                       <div className="max-w-md">
-                        <p className={`text-white/90 text-lg font-light leading-relaxed transition-all duration-300 ${isLoyaltyExpanded ? '' : 'line-clamp-3'}`}>
+                        <p className={`text-white/90 text-sm md:text-lg font-light leading-relaxed transition-all duration-300 ${isLoyaltyExpanded ? '' : 'line-clamp-2 md:line-clamp-3'}`}>
                           {loyalty.description || 'Únete a nuestro club exclusivo. Cada visita te acerca más a tu próximo tratamiento de lujo totalmente gratis.'}
                         </p>
                         {((loyalty.description?.length || 100) > 100) && (
@@ -249,19 +253,19 @@ export default function Home() {
                         )}
                       </div>
 
-                      <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 inline-block">
-                        <div className="text-4xl font-black mb-2">{loyalty.appointments_threshold} <span className="text-lg font-normal font-serif italic">Visitas</span></div>
-                        <div className="text-sm font-bold uppercase tracking-widest opacity-80">= 1 Servicio Gratis</div>
+                      <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl md:rounded-2xl p-4 md:p-6 inline-block">
+                        <div className="text-2xl md:text-4xl font-black mb-1 md:mb-2">{loyalty.appointments_threshold} <span className="text-sm md:text-lg font-normal font-serif italic">Visitas</span></div>
+                        <div className="text-[10px] md:text-sm font-bold uppercase tracking-widest opacity-80">= 1 Servicio Gratis</div>
                       </div>
                   </div>
                   
-                  <div className="flex justify-center lg:justify-end">
-                     <div className="w-full max-w-sm aspect-square bg-surface rounded-[30px] rotate-3 flex items-center justify-center p-8 shadow-2xl relative transition-transform hover:rotate-0 duration-500">
-                        <div className="absolute -top-6 -right-6 bg-brand text-white w-24 h-24 rounded-full flex flex-col items-center justify-center -rotate-12 shadow-xl border-4 border-bg-base z-20">
-                           <span className="text-xs font-bold uppercase tracking-widest">VIP</span>
-                           <span className="text-2xl font-serif italic">Only</span>
+                  <div className="flex justify-center lg:justify-end hidden sm:flex">
+                     <div className="w-full max-w-[14rem] md:max-w-sm aspect-square bg-surface rounded-2xl md:rounded-[30px] rotate-3 flex items-center justify-center p-6 md:p-8 shadow-2xl relative transition-transform hover:rotate-0 duration-500">
+                        <div className="absolute -top-4 -right-4 md:-top-6 md:-right-6 bg-brand text-white w-16 h-16 md:w-24 md:h-24 rounded-full flex flex-col items-center justify-center -rotate-12 shadow-xl border-4 border-bg-base z-20">
+                           <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest">VIP</span>
+                           <span className="text-lg md:text-2xl font-serif italic">Only</span>
                         </div>
-                        <h3 className="text-5xl text-accent-green font-black text-center uppercase tracking-tighter leading-none">
+                        <h3 className="text-3xl md:text-5xl text-accent-green font-black text-center uppercase tracking-tighter leading-none">
                            Join<br/><span className="text-zinc-900 font-serif italic font-light">The<br/>Club</span>
                         </h3>
                      </div>
@@ -316,8 +320,14 @@ export default function Home() {
             </h2>
             <p className="text-zinc-500 font-light text-sm max-w-sm">Elevando los estándares de belleza con cada detalle.</p>
             <div className="flex gap-8 text-xs font-bold uppercase tracking-widest text-accent-green">
-               <Link href="/login" className="hover:text-brand transition-colors">Ingresar</Link>
-               <Link href="/register" className="hover:text-brand transition-colors">Registrarse</Link>
+               {isLoggedIn && userId ? (
+                 <Link href={`/dashboard/client/${userId}/reservas/select-barber`} className="hover:text-brand transition-colors">Mi Cuenta</Link>
+               ) : (
+                 <>
+                   <Link href="/login" className="hover:text-brand transition-colors">Ingresar</Link>
+                   <Link href="/register" className="hover:text-brand transition-colors">Registrarse</Link>
+                 </>
+               )}
             </div>
             <div className="pt-10 w-full text-xs text-zinc-400 font-light border-t border-accent-green/10">
                © {new Date().getFullYear()} Alma Spa. Todos los derechos reservados.
