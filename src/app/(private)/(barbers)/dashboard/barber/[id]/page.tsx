@@ -7,15 +7,19 @@ import {
    Clock,
    Activity,
    X,
-   Check
+   Check,
+   Calendar,
+   Users
 } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { Service } from '@/types';
+import { formatPrice } from '@/lib/format';
 import { useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { useUpdateAppointmentStatus } from '@/hooks/barber';
+import Link from 'next/link';
 
 export default function BarberDashboardPage() {
    const params = useParams();
@@ -132,7 +136,7 @@ export default function BarberDashboardPage() {
                                         <p className="text-[11px] font-black text-white uppercase italic leading-none">{apt.client?.name || apt.client_name}</p>
                                         <p className="text-[8px] font-black text-[#f59e0b] uppercase mt-2 tracking-widest">{format(new Date(apt.start_time), 'dd MMM')} • {format(new Date(apt.start_time), 'HH:mm')}</p>
                                      </div>
-                                     <p className="text-sm font-black italic text-white">${new Intl.NumberFormat('de-DE').format(apt.price)}</p>
+                                     <p className="text-sm font-black italic text-white">{formatPrice(apt.price)}</p>
                                   </div>
                                   <div className="flex gap-2">
                                      <button
@@ -142,7 +146,7 @@ export default function BarberDashboardPage() {
                                         Aprobar
                                      </button>
                                      <button
-                                        onClick={() => statusMutation.mutate({ id: apt.id, status: 'cancelled', barberId, notes: 'Rechazada desde inicio' })}
+                                        onClick={() => statusMutation.mutate({ id: apt.id, status: 'cancelled', barberId, notes: '[Cancelado por Barbero]: Rechazada desde inicio' })}
                                         className="flex-1 bg-white/5 text-white/30 py-2 rounded-lg text-[8px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all"
                                      >
                                         Rechazar
@@ -200,6 +204,129 @@ export default function BarberDashboardPage() {
             </div>
          </div>
 
+         {/* TARJETAS DE ACCESOS DIRECTOS */}
+         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+           <Link href={`/dashboard/barber/${barberId}/agenda`} className="group">
+             <div className="bg-black/80 border border-white/10 rounded-3xl p-6 hover:bg-[#f59e0b]/10 hover:border-[#f59e0b]/30 transition-all flex flex-col justify-between h-full relative overflow-hidden">
+               <div className="absolute -right-6 -top-6 w-32 h-32 bg-[#f59e0b]/10 rounded-full blur-3xl group-hover:bg-[#f59e0b]/20 transition-all"></div>
+               <div className="flex items-center justify-between mb-8 relative z-10">
+                 <div className="p-3 bg-white/5 rounded-2xl text-white group-hover:text-[#f59e0b] transition-colors">
+                   <Calendar size={24} />
+                 </div>
+                 <span className="text-[10px] font-black uppercase tracking-widest text-[#f59e0b]">Calendario</span>
+               </div>
+               <div className="relative z-10">
+                 <p className="text-4xl font-black italic tracking-tighter text-white">{todayApts.length}</p>
+                 <p className="text-xs font-bold text-white/40 uppercase tracking-widest mt-1">Citas Hoy</p>
+               </div>
+             </div>
+           </Link>
+
+           <Link href={`/dashboard/barber/${barberId}/clients`} className="group">
+             <div className="bg-black/80 border border-white/10 rounded-3xl p-6 hover:bg-emerald-500/10 hover:border-emerald-500/30 transition-all flex flex-col justify-between h-full relative overflow-hidden">
+               <div className="absolute -right-6 -top-6 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl group-hover:bg-emerald-500/20 transition-all"></div>
+               <div className="flex items-center justify-between mb-8 relative z-10">
+                 <div className="p-3 bg-white/5 rounded-2xl text-white group-hover:text-emerald-500 transition-colors">
+                   <Users size={24} />
+                 </div>
+                 <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Cartera</span>
+               </div>
+               <div className="relative z-10">
+                 <p className="text-4xl font-black italic tracking-tighter text-white">Mis Clientes</p>
+                 <p className="text-xs font-bold text-white/40 uppercase tracking-widest mt-1">Directorio Personal</p>
+               </div>
+             </div>
+           </Link>
+         </div>
+
+         {/* AGENDA DEL DÍA (EN VIVO) */}
+         <div className="bg-surface/50 border border-white/5 rounded-[3rem] p-4 md:p-8 mt-10">
+            <div className="flex items-center justify-between mb-8 px-4">
+              <h3 className="text-xl md:text-2xl font-black text-white uppercase italic tracking-tighter flex items-center gap-3">
+                <div className="w-2 h-2 rounded-full bg-[#f59e0b] animate-pulse"></div>
+                En Vivo (Hoy)
+              </h3>
+              <span className="text-[8px] font-black text-white/20 uppercase tracking-widest italic">{todayApts.length} Servicios registrados hoy</span>
+            </div>
+            
+            <div className="flex flex-col -space-y-px">
+              {todayApts.length === 0 ? (
+                <div className="py-24 text-center border-2 border-dashed border-white/5 rounded-[3rem] opacity-30 flex flex-col items-center justify-center gap-4">
+                  <Activity size={40} className="text-white/20" />
+                  <p className="text-[9px] font-black uppercase tracking-[0.3em]">Sin actividad registrada hoy</p>
+                </div>
+              ) : (
+                todayApts.map((apt, idx) => (
+                  <motion.div 
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: idx * 0.05 }}
+                    key={apt.id} 
+                    className={`
+                      bg-black/80 border border-white/10 p-5 md:p-6 flex flex-col md:flex-row justify-between items-center gap-4 transition-all group relative z-10 hover:z-20
+                      ${idx === 0 ? 'rounded-t-[2rem]' : ''}
+                      ${idx === todayApts.length - 1 ? 'rounded-b-[2rem]' : ''}
+                      ${apt.status === 'occupied' ? 'border-[#f59e0b]/50 bg-[#f59e0b]/5' : 'hover:bg-white/[0.02]'}
+                    `}
+                  >
+                    <div className="flex items-center gap-4 md:gap-6 w-full md:w-auto">
+                      <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex flex-col items-center justify-center shrink-0">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-white/30">{format(new Date(apt.start_time), 'MMM')}</span>
+                        <span className="text-xl font-black italic tracking-tighter text-white">{format(new Date(apt.start_time), 'dd')}</span>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm md:text-lg font-black text-white uppercase tracking-tight italic truncate leading-none mb-1.5">{apt.client?.name || apt.client_name}</p>
+                        <div className="flex items-center gap-2">
+                           <span className="text-[8px] text-white/20 font-black uppercase tracking-widest">Hora:</span>
+                           <span className="text-[8px] text-[#f59e0b] font-black uppercase tracking-widest italic">{format(new Date(apt.start_time), 'dd MMM • HH:mm')}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {apt.status === 'cancelled' && apt.notes && (
+                      <div className="w-full mt-4 bg-red-500/10 border border-red-500/20 rounded-xl p-3">
+                           <p className="text-[9px] font-black uppercase tracking-widest text-red-500 mb-1">
+                              {apt.notes.startsWith('[Cancelado por Cliente]:') 
+                                 ? 'Cancelado por el Cliente' 
+                                 : apt.notes.startsWith('[Cancelado por Barbero]:') 
+                                    ? 'Cancelado por ti'
+                                    : 'Motivo de Cancelación'}
+                           </p>
+                           <p className="text-xs text-white/80 italic">
+                              {apt.notes.startsWith('[Cancelado por Cliente]:') 
+                                 ? `El cliente canceló porque: ${apt.notes.replace('[Cancelado por Cliente]:', '').trim()}`
+                                 : apt.notes.startsWith('[Cancelado por Barbero]:') 
+                                    ? `Tú cancelaste porque: ${apt.notes.replace('[Cancelado por Barbero]:', '').trim()}`
+                                    : apt.notes}
+                           </p>
+                      </div>
+                    )}
+                    
+                    <div className="flex items-center justify-between md:justify-end w-full md:w-auto gap-6 border-t md:border-t-0 border-white/5 pt-4 md:pt-0 mt-2 md:mt-0">
+                       <div className="text-left md:text-right">
+                          <p className="text-[8px] text-white/30 font-black uppercase tracking-widest mb-1">Total</p>
+                          <p className="text-lg md:text-xl font-black italic tracking-tighter text-white">{formatPrice(apt.price)}</p>
+                       </div>
+                       
+                       <div className={`px-4 py-2 rounded-xl border flex items-center justify-center min-w-[100px] ${
+                         apt.status === 'completed' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' :
+                         apt.status === 'confirmed' ? 'bg-blue-500/10 border-blue-500/20 text-blue-500' :
+                         apt.status === 'occupied' ? 'bg-[#f59e0b]/10 border-[#f59e0b]/20 text-[#f59e0b] animate-pulse' :
+                         'bg-white/5 border-white/10 text-white/40'
+                       }`}>
+                         <span className="text-[9px] font-black uppercase tracking-widest italic">{
+                           apt.status === 'completed' ? 'Finalizado' :
+                           apt.status === 'confirmed' ? 'Confirmada' :
+                           apt.status === 'occupied' ? 'En Curso' : apt.status
+                         }</span>
+                       </div>
+                    </div>
+                  </motion.div>
+                ))
+              )}
+            </div>
+         </div>
+
          {/* MODAL VENTA RÁPIDA */}
          {showWalkinForm && (
             <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-4 animate-in fade-in duration-300">
@@ -237,7 +364,7 @@ export default function BarberDashboardPage() {
                                     className={`cursor-pointer p-6 rounded-2xl border-2 transition-all flex justify-between items-center ${isSelected ? 'border-[#f59e0b] bg-[#f59e0b]/5' : 'border-white/5 bg-white/5'}`}
                                  >
                                     <p className="text-[11px] font-black uppercase tracking-widest text-white">{s.name}</p>
-                                    <p className="text-sm font-black text-[#f59e0b] italic">${new Intl.NumberFormat('de-DE').format(s.price)}</p>
+                                    <p className="text-sm font-black text-[#f59e0b] italic">{formatPrice(s.price)}</p>
                                  </div>
                               )
                            })}

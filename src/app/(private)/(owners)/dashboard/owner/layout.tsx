@@ -17,7 +17,10 @@ import {
   LogOut,
   X,
   ChevronDown,
-  Settings
+  Settings,
+  Wallet,
+  BarChart3,
+  ShieldAlert
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -33,8 +36,10 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
   
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const navRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     if (userProfile && userProfile.role !== 'owner') {
@@ -48,6 +53,9 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsUserDropdownOpen(false);
+      }
+      if (navRef.current && !navRef.current.contains(event.target as Node)) {
+        setActiveDropdown(null);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -78,13 +86,30 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
 
   const tabs = [
     { id: 'inicio', icon: Activity, label: 'Inicio', href: '/dashboard/owner' },
-    { id: 'config', icon: Clock, label: 'Horarios', href: '/dashboard/owner/schedules' },
-    { id: 'promociones', icon: Sparkles, label: 'Promociones', href: '/dashboard/owner/promotions' },
-    { id: 'barberos', icon: Users, label: 'Equipo', href: '/dashboard/owner/team' },
-    { id: 'clientes', icon: User, label: 'Clientes', href: '/dashboard/owner/clients' },
-    { id: 'servicios', icon: Scissors, label: 'Servicios', href: '/dashboard/owner/services' },
-    { id: 'gastos', icon: DollarSign, label: 'Gastos', href: '/dashboard/owner/expenses' },
-    { id: 'ajustes', icon: Settings, label: 'Configuración', href: '/dashboard/owner/settings' }
+    { 
+      id: 'gestion', icon: Users, label: 'Gestión', 
+      subItems: [
+        { id: 'barberos', icon: Users, label: 'Equipo', href: '/dashboard/owner/team' },
+        { id: 'clientes', icon: User, label: 'Clientes', href: '/dashboard/owner/clients' },
+        { id: 'servicios', icon: Scissors, label: 'Servicios', href: '/dashboard/owner/services' },
+        { id: 'promociones', icon: Sparkles, label: 'Promociones', href: '/dashboard/owner/promotions' },
+      ]
+    },
+    { 
+      id: 'finanzas', icon: Wallet, label: 'Finanzas', 
+      subItems: [
+        { id: 'gastos', icon: DollarSign, label: 'Gastos', href: '/dashboard/owner/expenses' },
+        { id: 'finanzas', icon: Wallet, label: 'Finanzas', href: '/dashboard/owner/finances' },
+        { id: 'reportes', icon: BarChart3, label: 'Reportes', href: '/dashboard/owner/reports' },
+      ]
+    },
+    { 
+      id: 'admin', icon: Settings, label: 'Administración',
+      subItems: [
+        { id: 'config', icon: Clock, label: 'Horarios', href: '/dashboard/owner/schedules' },
+        { id: 'usuarios', icon: ShieldAlert, label: 'Seguridad', href: '/dashboard/owner/users' },
+      ]
+    }
   ];
 
   if (!userProfile || userProfile.role !== 'owner') return null;
@@ -110,13 +135,53 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
         </Link>
 
         {/* NAVEGACIÓN CENTRAL */}
-        <nav className="flex items-center gap-1 xl:gap-2 absolute left-1/2 -translate-x-1/2">
+        <nav className="flex items-center gap-1 xl:gap-2 absolute left-1/2 -translate-x-1/2" ref={navRef}>
           {tabs.map(tab => {
+            if (tab.subItems) {
+              const isChildActive = tab.subItems.some(sub => pathname === sub.href);
+              const isOpen = activeDropdown === tab.id;
+              
+              return (
+                <div key={tab.id} className="relative">
+                  <button
+                    onClick={() => setActiveDropdown(isOpen ? null : tab.id)}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${isChildActive
+                      ? 'bg-brand/10 text-brand'
+                      : 'text-white/50 hover:bg-white/5 hover:text-white'
+                      }`}
+                  >
+                    <tab.icon size={16} className={`${isChildActive ? 'text-brand' : 'text-white/50'}`} />
+                    <span className="hidden xl:inline">{tab.label}</span>
+                    <ChevronDown size={14} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                  
+                  {isOpen && (
+                    <div className="absolute top-full left-0 mt-2 w-48 bg-surface/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden py-2 animate-in fade-in slide-in-from-top-2">
+                      {tab.subItems.map(sub => {
+                        const isSubActive = pathname === sub.href;
+                        return (
+                          <Link
+                            key={sub.id}
+                            href={sub.href}
+                            onClick={() => setActiveDropdown(null)}
+                            className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-all ${isSubActive ? 'text-brand bg-white/5' : 'text-white/70 hover:text-white hover:bg-white/5'}`}
+                          >
+                            <sub.icon size={14} />
+                            {sub.label}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+            
             const isActive = pathname === tab.href;
             return (
               <Link
                 key={tab.id}
-                href={tab.href}
+                href={tab.href!}
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${isActive
                   ? 'bg-brand/10 text-brand'
                   : 'text-white/50 hover:bg-white/5 hover:text-white'
@@ -210,7 +275,17 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
       <main className="flex-1 p-4 lg:p-10 pb-28 lg:pb-10 overflow-y-auto relative z-10 custom-scrollbar">
         <div className="lg:hidden mb-6 pt-20">
            <h1 className="text-[10px] font-bold uppercase tracking-widest text-white/40">
-             {tabs.find(t => t.href === pathname)?.label || 'Panel de Control'}
+             {(() => {
+               if (pathname === '/dashboard/owner') return 'Inicio';
+               for (const tab of tabs) {
+                 if (tab.href === pathname) return tab.label;
+                 if (tab.subItems) {
+                   const found = tab.subItems.find(sub => sub.href === pathname);
+                   if (found) return found.label;
+                 }
+               }
+               return 'Panel de Control';
+             })()}
            </h1>
         </div>
         {children}
@@ -257,7 +332,9 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
                 { id: 'promociones', icon: Sparkles, label: 'Promociones', href: '/dashboard/owner/promotions' },
                 { id: 'servicios', icon: Scissors, label: 'Servicios', href: '/dashboard/owner/services' },
                 { id: 'gastos', icon: DollarSign, label: 'Gastos', href: '/dashboard/owner/expenses' },
-                { id: 'ajustes', icon: Settings, label: 'Configuración', href: '/dashboard/owner/settings' },
+                { id: 'finanzas', icon: Wallet, label: 'Finanzas', href: '/dashboard/owner/finances' },
+                { id: 'reportes', icon: BarChart3, label: 'Reportes', href: '/dashboard/owner/reports' },
+                { id: 'usuarios', icon: ShieldAlert, label: 'Seguridad', href: '/dashboard/owner/users' },
                 { id: 'perfil', icon: UserCircle, label: 'Mi Perfil', href: '/dashboard/owner/profile' }
               ].map(tab => {
                 const isActive = pathname === tab.href;

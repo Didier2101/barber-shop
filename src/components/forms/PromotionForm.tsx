@@ -1,12 +1,11 @@
 'use client';
 import { useOwnerBaseData, useOwnerMutations } from '@/hooks/owner';
-import { 
-  Calendar, 
-  Check, 
+import {
+  Calendar,
+  Check,
   Zap
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Promotion } from '@/types';
 
@@ -20,11 +19,11 @@ interface PromotionFormProps {
 export function PromotionForm({ initialData, isEditing = false, onSuccess, onCancel }: PromotionFormProps) {
   const { data: baseData, isLoading: baseLoading } = useOwnerBaseData();
   const { createPromotion, updatePromotion } = useOwnerMutations();
-  
+
   const services = baseData?.services || [];
 
   const [isRange, setIsRange] = useState(false);
-  
+
   const [form, setForm] = useState({
     name: initialData?.name || '',
     description: initialData?.description || '',
@@ -76,12 +75,12 @@ export function PromotionForm({ initialData, isEditing = false, onSuccess, onCan
 
   const handleSave = () => {
     if (!form.name.trim()) return toast.error('El nombre es obligatorio');
-    
+
     const payload = {
       ...form,
       start_date: new Date(form.start_date + 'T12:00:00').toISOString(),
-      end_date: isRange 
-        ? new Date(form.end_date + 'T12:00:00').toISOString() 
+      end_date: isRange
+        ? new Date(form.end_date + 'T12:00:00').toISOString()
         : new Date(form.start_date + 'T12:00:00').toISOString(),
     };
 
@@ -113,26 +112,26 @@ export function PromotionForm({ initialData, isEditing = false, onSuccess, onCan
   return (
     <div className="space-y-6">
       <div className="bg-surface border border-white/5 rounded-2xl p-6 shadow-xl space-y-6">
-        
+
         <div className="space-y-4">
           <div className="space-y-2">
             <label className="text-[10px] font-medium text-white/40 uppercase tracking-wider ml-1">Título de la Oferta</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               placeholder="Ej: COMBO BARBA + CORTE"
               className="w-full bg-bg-base border border-white/5 rounded-xl px-4 py-3 text-sm font-semibold text-white uppercase outline-none focus:border-brand transition-all shadow-sm"
               value={form.name}
-              onChange={e => setForm({...form, name: e.target.value})}
+              onChange={e => setForm({ ...form, name: e.target.value })}
             />
           </div>
           <div className="space-y-2">
             <label className="text-[10px] font-medium text-white/40 uppercase tracking-wider ml-1">Detalles de la Promo</label>
-            <textarea 
+            <textarea
               placeholder="Explica de qué trata la oferta..."
               rows={3}
               className="w-full bg-bg-base border border-white/5 rounded-xl px-4 py-3 text-sm text-white/80 outline-none focus:border-brand transition-all resize-none shadow-sm"
               value={form.description}
-              onChange={e => setForm({...form, description: e.target.value})}
+              onChange={e => setForm({ ...form, description: e.target.value })}
             />
           </div>
         </div>
@@ -142,9 +141,9 @@ export function PromotionForm({ initialData, isEditing = false, onSuccess, onCan
             <label className="text-[10px] font-medium text-white/40 uppercase tracking-wider ml-1">Tipo de Descuento</label>
             <div className="flex bg-bg-base p-1.5 rounded-xl border border-white/5">
               {(['percentage', 'fixed', 'free'] as const).map(type => (
-                <button 
+                <button
                   key={type}
-                  onClick={() => setForm({...form, discount_type: type})}
+                  onClick={() => setForm({ ...form, discount_type: type })}
                   className={`flex-1 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${form.discount_type === type ? 'bg-brand text-black shadow-md' : 'text-white/40 hover:text-white'}`}
                 >
                   {type === 'percentage' ? '%' : type === 'fixed' ? '$' : 'FREE'}
@@ -156,8 +155,8 @@ export function PromotionForm({ initialData, isEditing = false, onSuccess, onCan
           {form.discount_type !== 'free' && (
             <div className="space-y-2">
               <label className="text-[10px] font-medium text-white/40 uppercase tracking-wider ml-1">Valor</label>
-              <input 
-                type="number" 
+              <input
+                type="number"
                 className="w-full bg-bg-base border border-white/5 rounded-xl px-4 py-3 text-sm font-bold text-white outline-none focus:border-brand transition-all shadow-sm"
                 value={form.discount_value}
                 onChange={e => {
@@ -184,7 +183,7 @@ export function PromotionForm({ initialData, isEditing = false, onSuccess, onCan
                 <p className="text-[10px] text-brand font-medium uppercase tracking-wider">{isRange ? 'Rango de fechas' : 'Día único'}</p>
               </div>
             </div>
-            <button 
+            <button
               onClick={() => setIsRange(!isRange)}
               className={`w-10 h-5 rounded-full p-1 transition-all duration-300 relative ${isRange ? 'bg-brand' : 'bg-white/10'}`}
             >
@@ -195,21 +194,21 @@ export function PromotionForm({ initialData, isEditing = false, onSuccess, onCan
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-[10px] font-medium text-white/40 uppercase tracking-wider ml-1">{isRange ? 'Fecha Inicio' : 'Fecha del Evento'}</label>
-              <input 
-                type="date" 
+              <input
+                type="date"
                 className="w-full bg-bg-base border border-white/5 rounded-xl px-4 py-3 text-sm text-white font-medium outline-none focus:border-brand transition-all shadow-sm"
                 value={form.start_date}
-                onChange={e => setForm({...form, start_date: e.target.value})}
+                onChange={e => setForm({ ...form, start_date: e.target.value })}
               />
             </div>
             {isRange && (
               <div className="space-y-2 animate-in fade-in slide-in-from-left-2 duration-300">
                 <label className="text-[10px] font-medium text-white/40 uppercase tracking-wider ml-1">Fecha Fin</label>
-                <input 
-                  type="date" 
+                <input
+                  type="date"
                   className="w-full bg-bg-base border border-white/5 rounded-xl px-4 py-3 text-sm text-white font-medium outline-none focus:border-brand transition-all shadow-sm"
                   value={form.end_date}
-                  onChange={e => setForm({...form, end_date: e.target.value})}
+                  onChange={e => setForm({ ...form, end_date: e.target.value })}
                 />
               </div>
             )}
@@ -221,7 +220,7 @@ export function PromotionForm({ initialData, isEditing = false, onSuccess, onCan
         <div className="relative z-10">
           <h3 className="text-sm font-bold uppercase tracking-widest mb-1">Servicios</h3>
           <p className="text-[10px] text-white/40 font-medium uppercase tracking-wider mb-4">¿A qué servicios aplica esta promo?</p>
-          
+
           <div className="space-y-2 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
             {services.length === 0 ? (
               <p className="text-white/30 text-xs italic">No tienes servicios configurados.</p>
@@ -247,14 +246,14 @@ export function PromotionForm({ initialData, isEditing = false, onSuccess, onCan
 
       <div className="flex gap-4">
         {onCancel && (
-          <button 
+          <button
             onClick={onCancel}
             className="flex-1 bg-white/5 text-white/60 hover:text-white hover:bg-white/10 py-4 rounded-xl font-bold uppercase tracking-widest text-xs transition-all"
           >
             Cancelar
           </button>
         )}
-        <button 
+        <button
           onClick={handleSave}
           disabled={createPromotion.isPending || updatePromotion.isPending}
           className="flex-1 bg-brand text-black py-4 rounded-xl font-bold uppercase tracking-widest text-xs shadow-xl shadow-brand/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50"

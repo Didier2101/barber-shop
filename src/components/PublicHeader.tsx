@@ -15,11 +15,16 @@ export function PublicHeader() {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('id, role')
+        .select('id, role, is_active')
         .eq('id', session.user.id)
         .maybeSingle();
 
-      if (!profile) return;
+      if (!profile || profile.is_active === false) {
+        await supabase.auth.signOut();
+        return;
+      }
+
+      document.cookie = "barbershop-auth=true; path=/; max-age=2592000; SameSite=Lax";
 
       if (profile.role === 'owner') setDashboardHref('/dashboard/owner');
       else if (profile.role === 'barber') setDashboardHref(`/dashboard/barber/${profile.id}`);

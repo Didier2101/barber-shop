@@ -16,7 +16,9 @@ export interface Profile {
   services_completed?: number;
   data_policy_accepted?: boolean;
   data_policy_accepted_at?: string;
+  specialty?: string;
   commission_percentage?: number;
+  barber_services?: { service_id: string }[];
   created_at: string;
 }
 

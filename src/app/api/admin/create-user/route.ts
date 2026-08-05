@@ -3,9 +3,9 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 export async function POST(request: Request) {
   try {
-    const { name, email, password, commission_percentage } = await request.json();
+    const { name, email, password, commission_percentage, phone, address } = await request.json();
 
-    if (!name || !email || !password) {
+    if (!name || !email || !password || !phone) {
       return NextResponse.json({ error: 'Faltan campos obligatorios' }, { status: 400 });
     }
 
@@ -34,6 +34,8 @@ export async function POST(request: Request) {
         {
           id: userId,
           name,
+          phone,
+          address,
           role: 'barber',
           commission_percentage: commission_percentage || 50,
           is_active: true,

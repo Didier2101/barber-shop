@@ -10,7 +10,8 @@ El sistema opera bajo un modelo multi-inquilino (Multi-tenant) con tres niveles 
 
 ## 📖 Contenido de la Documentación
 
-### 🛡️ Sistema y Seguridad
+### 🛡️ Sistema, Arquitectura y Seguridad
+*   [Referencia Completa del Sistema (Stack, BD, Flujos)](sistema.md): Documentación global de las entidades, tech stack y estructura general.
 *   [Arquitectura y Seguridad](sistema/arquitectura.md): Explicación del ruteo por ID y validación de sesiones.
 *   [Blindaje de Promociones](sistema/seguridad_promociones.md): Lógica de bloqueo y seguridad en ofertas.
 

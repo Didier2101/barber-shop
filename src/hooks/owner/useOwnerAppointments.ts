@@ -1,7 +1,7 @@
 'use client';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { Profile, Appointment } from '@/types';
+import { Appointment } from '@/types';
 import { startOfDay, endOfDay } from 'date-fns';
 
 export function useTodayAppointments() {

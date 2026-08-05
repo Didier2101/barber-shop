@@ -1,30 +1,35 @@
 'use client';
-import { useOwnerBaseData, useOwnerStats, useTodayAppointments } from '@/hooks/owner';
-import { 
-  LayoutDashboard, 
-  TrendingUp, 
-  Activity, 
-  TrendingDown, 
-  Sparkles,
-  Briefcase
+import { useOwnerBaseData, useTodayAppointments } from '@/hooks/owner';
+import {
+  Activity,
+  Briefcase,
+  Users,
+  LayoutDashboard
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
+import Link from 'next/link';
+import { formatPrice } from '@/lib/format';
 
 export default function OwnerDashboardPage() {
-  const { isLoading: baseLoading } = useOwnerBaseData();
-  const { data: currentStats } = useOwnerStats();
-  const { data: todayApts = [] } = useTodayAppointments();
+  const [totalClients, setTotalClients] = useState(0);
+  const [totalBarbers, setTotalBarbers] = useState(0);
 
-  const stats = currentStats || {
-    grossIncome: 0,
-    ownerIncome: 0,
-    pendingOwnerIncome: 0,
-    settledOwnerIncome: 0,
-    expense: 0,
-    profit: 0,
-    margin: 0,
-  };
+  useEffect(() => {
+    async function fetchCounts() {
+      const [{ count: clientsCount }, { count: barbersCount }] = await Promise.all([
+        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'client'),
+        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'barber').eq('is_active', true)
+      ]);
+      setTotalClients(clientsCount || 0);
+      setTotalBarbers(barbersCount || 0);
+    }
+    fetchCounts();
+  }, []);
+  const { isLoading: baseLoading } = useOwnerBaseData();
+  const { data: todayApts = [] } = useTodayAppointments();
 
   if (baseLoading) {
     return (
@@ -53,34 +58,55 @@ export default function OwnerDashboardPage() {
         </div>
       </div>
 
-      {/* MÉTRICAS DE PRECISIÓN (ESTILO TICKER) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 flex flex-col lg:flex-row -space-y-px lg:-space-y-0 lg:-space-x-px">
-        {[
-          { label: 'Ventas Brutas', value: stats.grossIncome, icon: TrendingUp, color: 'text-white', sub: 'Facturación Total' },
-          { label: 'En Caja (Pendiente)', value: stats.pendingOwnerIncome, icon: Activity, color: 'text-[#f59e0b]', sub: 'Por Liquidar' },
-          { label: 'Gastos del Mes', value: stats.expense, icon: TrendingDown, color: 'text-red-500', sub: 'Salida de Capital' },
-          { label: 'Utilidad Neta', value: stats.profit, icon: Sparkles, color: 'text-emerald-500', sub: 'Beneficio Final' }
-        ].map((item, idx, arr) => (
-          <div 
-            key={item.label}
-            className={`
-              bg-black/80 border border-white/10 p-6 md:p-8 flex flex-col justify-between transition-all group hover:bg-black/90
-              ${idx === 0 ? 'rounded-t-[2.5rem] lg:rounded-tr-none lg:rounded-l-[2.5rem]' : ''}
-              ${idx === arr.length - 1 ? 'rounded-b-[2.5rem] lg:rounded-bl-none lg:rounded-r-[2.5rem]' : ''}
-            `}
-          >
-            <div className="flex justify-between items-start mb-6">
-              <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.2em]">{item.label}</p>
-              <item.icon size={16} className={`${item.color} opacity-40 group-hover:opacity-100 transition-all`} />
+      {/* TARJETAS DE ACCESOS DIRECTOS Y ESTADO EN VIVO */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <Link href="/dashboard/owner/team" className="group">
+          <div className="bg-black/80 border border-white/10 rounded-3xl p-6 hover:bg-[#f59e0b]/10 hover:border-[#f59e0b]/30 transition-all flex flex-col justify-between h-full relative overflow-hidden">
+            <div className="absolute -right-6 -top-6 w-32 h-32 bg-[#f59e0b]/10 rounded-full blur-3xl group-hover:bg-[#f59e0b]/20 transition-all"></div>
+            <div className="flex items-center justify-between mb-8 relative z-10">
+              <div className="p-3 bg-white/5 rounded-2xl text-white group-hover:text-[#f59e0b] transition-colors">
+                <Briefcase size={24} />
+              </div>
+              <span className="text-[10px] font-black uppercase tracking-widest text-[#f59e0b]">Equipo</span>
             </div>
-            <div className="space-y-1">
-              <p className={`text-3xl md:text-4xl font-black italic tracking-tighter leading-none ${item.color}`}>
-                ${new Intl.NumberFormat('de-DE').format(item.value)}
-              </p>
-              <p className="text-[8px] font-black uppercase tracking-widest text-white/10">{item.sub}</p>
+            <div className="relative z-10">
+              <p className="text-4xl font-black italic tracking-tighter text-white">{totalBarbers}</p>
+              <p className="text-xs font-bold text-white/40 uppercase tracking-widest mt-1">Barberos Activos</p>
             </div>
           </div>
-        ))}
+        </Link>
+
+        <Link href="/dashboard/owner/clients" className="group">
+          <div className="bg-black/80 border border-white/10 rounded-3xl p-6 hover:bg-emerald-500/10 hover:border-emerald-500/30 transition-all flex flex-col justify-between h-full relative overflow-hidden">
+            <div className="absolute -right-6 -top-6 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl group-hover:bg-emerald-500/20 transition-all"></div>
+            <div className="flex items-center justify-between mb-8 relative z-10">
+              <div className="p-3 bg-white/5 rounded-2xl text-white group-hover:text-emerald-500 transition-colors">
+                <Users size={24} />
+              </div>
+              <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Cartera</span>
+            </div>
+            <div className="relative z-10">
+              <p className="text-4xl font-black italic tracking-tighter text-white">{totalClients}</p>
+              <p className="text-xs font-bold text-white/40 uppercase tracking-widest mt-1">Clientes Registrados</p>
+            </div>
+          </div>
+        </Link>
+
+        <div className="bg-black/80 border border-white/10 rounded-3xl p-6 flex flex-col justify-between h-full relative overflow-hidden">
+          <div className="absolute -right-6 -top-6 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl transition-all"></div>
+          <div className="flex items-center justify-between mb-8 relative z-10">
+            <div className="p-3 bg-blue-500/10 rounded-2xl text-blue-400">
+              <Activity size={24} className="animate-pulse" />
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-widest text-blue-400">En Vivo</span>
+          </div>
+          <div className="relative z-10">
+            <p className="text-4xl font-black italic tracking-tighter text-white">
+              {todayApts.filter(a => a.status === 'occupied').length}
+            </p>
+            <p className="text-xs font-bold text-white/40 uppercase tracking-widest mt-1">Barberos Cortando</p>
+          </div>
+        </div>
       </div>
 
       {/* MONITOR DE ACTIVIDAD (AGENDA) */}
@@ -91,7 +117,7 @@ export default function OwnerDashboardPage() {
           </h3>
           <span className="text-[8px] font-black text-white/20 uppercase tracking-widest italic">{todayApts.length} Servicios registrados hoy</span>
         </div>
-        
+
         <div className="flex flex-col -space-y-px">
           {todayApts.length === 0 ? (
             <div className="py-24 text-center border-2 border-dashed border-white/5 rounded-[3rem] opacity-30 flex flex-col items-center justify-center gap-4">
@@ -100,11 +126,11 @@ export default function OwnerDashboardPage() {
             </div>
           ) : (
             todayApts.map((apt, idx) => (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: idx * 0.05 }}
-                key={apt.id} 
+                key={apt.id}
                 className={`
                   bg-black/80 border border-white/10 p-5 md:p-6 flex flex-col md:flex-row justify-between items-center gap-4 transition-all group relative z-10 hover:z-20
                   ${idx === 0 ? 'rounded-t-[2rem]' : ''}
@@ -118,14 +144,14 @@ export default function OwnerDashboardPage() {
                   <div className="min-w-0 flex-1">
                     <p className="text-sm md:text-lg font-black text-white uppercase tracking-tight italic truncate leading-none mb-1.5">{apt.client?.name || apt.client_name}</p>
                     <div className="flex items-center gap-2">
-                       <span className="text-[8px] text-white/20 font-black uppercase tracking-widest">Atendido por:</span>
-                       <span className="text-[8px] text-[#f59e0b] font-black uppercase tracking-widest italic">{apt.barber?.name}</span>
+                      <span className="text-[8px] text-white/20 font-black uppercase tracking-widest">Atendido por:</span>
+                      <span className="text-[8px] text-[#f59e0b] font-black uppercase tracking-widest italic">{apt.barber?.name}</span>
                     </div>
                   </div>
                 </div>
                 <div className="flex items-center justify-between md:justify-end gap-6 w-full md:w-auto border-t md:border-t-0 border-white/5 pt-3 md:pt-0">
                   <div className="text-right">
-                    <p className="text-xl font-black italic text-white tracking-tighter leading-none">${new Intl.NumberFormat('de-DE').format(apt.price)}</p>
+                    <p className="text-xl font-black italic text-white tracking-tighter leading-none">{formatPrice(apt.price)}</p>
                   </div>
                   <span className={`text-[7px] font-black px-3 py-1 rounded-md uppercase tracking-widest ${apt.status === 'completed' ? 'text-emerald-500 bg-emerald-500/10 border border-emerald-500/20' : 'text-[#f59e0b] bg-[#f59e0b]/10 border border-[#f59e0b]/20'}`}>
                     {apt.status === 'completed' ? 'Liquidado' : 'Pendiente'}
@@ -133,7 +159,7 @@ export default function OwnerDashboardPage() {
                 </div>
               </motion.div>
             )
-          ))}
+            ))}
         </div>
       </div>
     </div>

@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import Swal from 'sweetalert2';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
+import { formatPrice } from '@/lib/format';
 
 export default function ExpensesPage() {
   const { isLoading: baseLoading } = useOwnerBaseData();
@@ -52,7 +53,7 @@ export default function ExpensesPage() {
         
         <div className="bg-black border border-red-500/20 px-8 py-4 rounded-2xl shadow-xl">
            <p className="text-[10px] font-bold uppercase tracking-widest text-red-400/80 mb-1">Salida Total del Mes</p>
-           <p className="text-3xl font-bold text-white tracking-tight leading-none">-$${new Intl.NumberFormat('de-DE').format(totalMonthlyExpenses)}</p>
+           <p className="text-3xl font-bold text-white tracking-tight leading-none">-{formatPrice(totalMonthlyExpenses)}</p>
         </div>
       </div>
 
@@ -95,7 +96,7 @@ export default function ExpensesPage() {
                           </div>
                        </div>
                        <div className="flex items-center gap-6">
-                          <p className="text-xl font-bold text-white tracking-tight leading-none">-$${new Intl.NumberFormat('de-DE').format(expense.amount)}</p>
+                          <p className="text-xl font-bold text-white tracking-tight leading-none">-{formatPrice(expense.amount)}</p>
                           <button 
                              onClick={() => {
                                 Swal.fire({

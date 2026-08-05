@@ -1,28 +1,16 @@
 'use client';
 import { useOwnerBaseData } from '@/hooks/owner';
 import {
-  Clock,
-  Trash,
-  Settings,
-  ArrowRight,
-  ChevronRight,
   Check,
   X
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
-import Swal from 'sweetalert2';
 
 export default function SchedulesPage() {
   const { data: baseData, isLoading: baseLoading, refetch } = useOwnerBaseData();
-  const [formShopSettings, setFormShopSettings] = useState({ accounting_period: 'monthly' });
 
-  useEffect(() => {
-    if (baseData?.shopSettings) {
-      setFormShopSettings({ accounting_period: baseData.shopSettings.accounting_period || 'monthly' });
-    }
-  }, [baseData]);
 
   const businessHours = baseData?.businessHours || [];
   const daysMap = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
@@ -36,12 +24,6 @@ export default function SchedulesPage() {
     }
   };
 
-  const updateShopSettings = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const { error } = await supabase.from('shop_settings').update(formShopSettings).eq('id', 1);
-    if (error) toast.error('Error al actualizar configuración');
-    else toast.success('Configuración actualizada');
-  };
 
   if (baseLoading) {
     return (

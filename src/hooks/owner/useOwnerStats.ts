@@ -23,19 +23,21 @@ export function useOwnerStats(filter: string = 'today', range?: { from: Date; to
         end = range.to ? endOfDay(range.to) : endOfDay(range.from);
       }
 
-      const periodKey = format(start, 'yyyy-MM');
+      const startYMD = format(start, 'yyyy-MM-dd');
+      const endYMD = format(end, 'yyyy-MM-dd');
 
       const [apts, expenses] = await Promise.all([
         supabase
           .from('appointments')
-          .select('price, status, barber_id, settlement_id, barber:barber_id(commission_percentage)')
+          .select('id, price, status, barber_id, settlement_id, start_time, client_name, barber:barber_id(name, commission_percentage)')
           .eq('status', 'completed')
           .gte('start_time', start.toISOString())
           .lte('start_time', end.toISOString()),
         supabase
           .from('expenses')
-          .select('amount')
-          .eq('period', periodKey),
+          .select('id, amount, description, category, expense_date')
+          .gte('expense_date', startYMD)
+          .lte('expense_date', endYMD),
       ]);
 
       let grossIncome = 0;
@@ -68,6 +70,8 @@ export function useOwnerStats(filter: string = 'today', range?: { from: Date; to
         profit,
         totalServices,
         margin,
+        rawApts: apts.data || [],
+        rawExpenses: expenses.data || [],
       };
     },
   });

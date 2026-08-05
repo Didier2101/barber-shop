@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
+import { formatPrice } from '@/lib/format';
 import { format } from 'date-fns';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
@@ -93,7 +94,7 @@ export default function BarberClientsPage() {
                         <div className="flex items-center gap-6 md:gap-12">
                            <div className="flex flex-col items-end">
                               <p className="text-[7px] font-black text-white/20 uppercase tracking-widest mb-0.5">Total Invertido</p>
-                              <p className="text-[10px] font-black text-emerald-500 italic tracking-tighter">${new Intl.NumberFormat('de-DE').format(c.totalSpent)}</p>
+                              <p className="text-[10px] font-black text-emerald-500 italic tracking-tighter">{formatPrice(c.totalSpent)}</p>
                            </div>
                            <div className="flex flex-col items-end shrink-0 min-w-[70px]">
                               <p className="text-[7px] font-black text-white/20 uppercase tracking-widest mb-0.5">Última Visita</p>

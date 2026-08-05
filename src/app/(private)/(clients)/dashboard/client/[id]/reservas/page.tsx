@@ -12,6 +12,7 @@ import { es } from 'date-fns/locale';
 import { useGlobalStore } from '@/store/useGlobalStore';
 import { Appointment, AppointmentService, BusinessHour } from '@/types';
 import { supabase } from '@/lib/supabase';
+import { formatPrice } from '@/lib/format';
 
 export default function MisReservasPage() {
   const profile = useGlobalStore(state => state.userProfile);
@@ -174,9 +175,24 @@ export default function MisReservasPage() {
       return toast.error('Por favor, indica el motivo en las notas (mínimo 10 caracteres)');
     }
 
+    const now = new Date();
+    const aptTime = new Date(selectedApt.start_time);
+    const diffHours = (aptTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+    let title = '¿CANCELAR CITA?';
+    let text = 'Se notificará al barbero con tu motivo.';
+    
+    if (diffHours >= 0 && diffHours < 1) {
+       title = '¡ATENCIÓN! CITA PRÓXIMA';
+       text = 'Estás cancelando con menos de 1 hora de anticipación. Si no asistes, el barbero pierde el espacio y el dinero de ese turno. ¿Estás seguro de cancelar?';
+    } else if (diffHours < 0) {
+       title = '¿CANCELAR CITA PASADA?';
+       text = 'Esta cita ya pasó su hora de inicio.';
+    }
+
     const result = await Swal.fire({
-      title: '¿CANCELAR CITA?',
-      text: "Se notificará al barbero con tu motivo.",
+      title,
+      text,
       icon: 'warning',
       background: '#0a0a0a',
       color: '#fff',
@@ -187,9 +203,8 @@ export default function MisReservasPage() {
     });
 
     if (result.isConfirmed) {
-      // Guardamos la nota antes de cancelar
-      await supabase.from('appointments').update({ notes: note }).eq('id', selectedApt.id);
-      cancelMutation.mutate(selectedApt.id);
+      const finalNote = `[Cancelado por Cliente]: ${note}`;
+      cancelMutation.mutate({ id: selectedApt.id, notes: finalNote });
       setIsManaging(false);
     }
   }
@@ -347,6 +362,25 @@ export default function MisReservasPage() {
                      </div>
                   </div>
 
+                  {apt.status === 'cancelled' && (
+                     <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 my-2">
+                        <p className="text-[9px] font-black uppercase tracking-widest text-red-500 mb-1">
+                           {apt.notes?.startsWith('[Cancelado por Barbero]:') 
+                              ? 'Cancelado por el Barbero' 
+                              : apt.notes?.startsWith('[Cancelado por Cliente]:') 
+                                 ? 'Cancelado por ti'
+                                 : 'Motivo de Cancelación'}
+                        </p>
+                        <p className="text-xs text-white/80 italic">
+                           {apt.notes?.startsWith('[Cancelado por Barbero]:') 
+                              ? `El barbero canceló porque: ${apt.notes.replace('[Cancelado por Barbero]:', '').trim()}`
+                              : apt.notes?.startsWith('[Cancelado por Cliente]:') 
+                                 ? `Tú cancelaste porque: ${apt.notes.replace('[Cancelado por Cliente]:', '').trim()}`
+                                 : (apt.notes || 'Cita cancelada (motivo no registrado)')}
+                        </p>
+                     </div>
+                  )}
+
                   <div className="pt-3 border-t border-white/5 flex items-center justify-between gap-3">
                      <div className="flex flex-wrap gap-1.5 flex-1">
                         {Array.isArray(apt.services_data) && (apt.services_data as AppointmentService[]).map((s) => (
@@ -357,7 +391,7 @@ export default function MisReservasPage() {
                         ))}
                      </div>
                      <div className="text-right shrink-0">
-                        <p className="text-lg font-black italic text-[#f59e0b] leading-none tracking-tighter">${new Intl.NumberFormat('de-DE').format(apt.price)}</p>
+                        <p className="text-lg font-black italic text-[#f59e0b] leading-none tracking-tighter">{formatPrice(apt.price)}</p>
                      </div>
                   </div>
                </div>

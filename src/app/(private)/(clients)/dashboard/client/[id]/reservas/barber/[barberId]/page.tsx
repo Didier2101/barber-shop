@@ -61,7 +61,7 @@ export default function BarberBookingPage() {
         ratingRes,
         promoRes
       ] = await Promise.all([
-        supabase.from('profiles').select('*').eq('id', id).single(),
+        supabase.from('profiles').select('*, barber_services(service_id)').eq('id', id).single(),
         supabase.from('services').select('*').eq('is_active', true),
         supabase.from('shop_settings').select('*').eq('id', 1).single(),
         supabase.from('business_hours').select('*'),
@@ -70,7 +70,13 @@ export default function BarberBookingPage() {
       ]);
 
       if (profileRes.data) setBarber(profileRes.data);
-      if (servicesRes.data) setServices(servicesRes.data);
+      if (servicesRes.data && profileRes.data) {
+        const bServices = profileRes.data.barber_services?.map((bs: { service_id: string }) => bs.service_id) || [];
+        const filteredServices = bServices.length > 0 
+           ? servicesRes.data.filter((s: Service) => bServices.includes(s.id))
+           : []; // Si el barbero no tiene servicios asignados, no muestra nada
+        setServices(filteredServices);
+      }
       if (shopRes.data) setShopSettings(shopRes.data);
       if (hoursRes.data) setBusinessHours(hoursRes.data);
 
@@ -284,7 +290,7 @@ export default function BarberBookingPage() {
       className="fixed inset-0 z-[120] bg-black flex flex-col overflow-hidden"
     >
       {/* Header Fijo */}
-      <div className="shrink-0 h-20 border-b border-white/5 bg-black/60 backdrop-blur-xl flex items-center justify-between px-6 z-10">
+      <div className="shrink-0 h-20 border-b border-white/5 bg-black/60 backdrop-blur-xl flex items-center justify-between px-6 z-50 relative">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-[#f59e0b]/10 text-[#f59e0b] flex items-center justify-center">
             <Scissors size={20} />

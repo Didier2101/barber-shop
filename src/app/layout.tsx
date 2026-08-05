@@ -66,8 +66,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es" className="dark">
-      <body className="bg-black text-white transition-colors duration-300">
+    <html lang="es" className="dark" suppressHydrationWarning>
+      <body className="bg-black text-white transition-colors duration-300" suppressHydrationWarning>
         <Toaster position="top-right" richColors theme="dark" />
         <PWARegistration />
         <QueryProvider>

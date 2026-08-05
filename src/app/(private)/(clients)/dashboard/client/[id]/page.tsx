@@ -10,7 +10,8 @@ import {
    UserCircle,
    ChevronRight,
    Gift,
-   Zap
+   Zap,
+   ArrowLeft
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useGlobalStore } from '@/store/useGlobalStore';
@@ -31,8 +32,14 @@ export default function ClientDashboardPage() {
    const { data: barbers = [] } = useQuery({
       queryKey: ['barbers-active'],
       queryFn: async () => {
-         const { data } = await supabase.from('profiles').select('*').eq('role', 'barber').eq('is_active', true);
-         return data || [];
+         const { data } = await supabase
+            .from('profiles')
+            .select('*, barber_services(service_id)')
+            .eq('role', 'barber')
+            .eq('is_active', true);
+         
+         // Filtrar barberos que tienen al menos un servicio asignado
+         return (data || []).filter((b: Profile) => b.barber_services && b.barber_services.length > 0);
       },
       staleTime: 1000 * 60 * 5,
    });
@@ -100,7 +107,7 @@ export default function ClientDashboardPage() {
                               </div>
                            </div>
                            <div className="flex items-center gap-3">
-                              <span className="text-sm font-black text-[#f59e0b] italic">{promo.discount_type === 'percentage' ? `-${promo.discount_value}%` : `-$${new Intl.NumberFormat('de-DE').format(promo.discount_value)}`}</span>
+                              <span className="text-sm font-black text-[#f59e0b] italic">{promo.discount_type === 'percentage' ? `-${promo.discount_value}%` : `-{formatPrice(promo.discount_value)}`}</span>
                               <ChevronRight size={14} className="text-white/20 group-hover:translate-x-1 transition-all" />
                            </div>
                         </div>
@@ -119,9 +126,9 @@ export default function ClientDashboardPage() {
          <AnimatePresence>
             {showBooking && (
                <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", damping: 25, stiffness: 200 }} className="fixed inset-0 z-[120] bg-black flex flex-col overflow-hidden">
-                  <div className="shrink-0 h-20 border-b border-white/5 bg-black/60 backdrop-blur-xl flex items-center justify-between px-6">
+                  <div className="shrink-0 h-20 border-b border-white/5 bg-black/60 backdrop-blur-xl flex items-center justify-between px-6 z-50 relative">
                      <div className="flex items-center gap-3"><div className="w-10 h-10 rounded-xl bg-[#f59e0b]/10 text-[#f59e0b] flex items-center justify-center"><Scissors size={20} /></div><div><h2 className="text-xl font-black text-white uppercase tracking-tighter italic">Reservar</h2><p className="text-[8px] font-black text-white/20 uppercase mt-1 tracking-[0.3em]">Paso 1: Tu Barbero</p></div></div>
-                     <button onClick={() => setShowBooking(false)} className="w-10 h-10 bg-white/5 text-white rounded-full flex items-center justify-center"><ChevronRight size={24} /></button>
+                     <button onClick={() => setShowBooking(false)} className="w-10 h-10 bg-white/5 text-white rounded-full flex items-center justify-center hover:bg-white/10 transition-all active:scale-90"><ArrowLeft size={20} /></button>
                   </div>
                   <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar pb-32">
                      <div className="text-center space-y-2"><h3 className="text-2xl font-black uppercase italic tracking-tighter text-white">Elige a tu <span className="text-[#f59e0b]">Artesano</span></h3><p className="text-[10px] font-medium text-white/40 max-w-xs mx-auto">Selecciona al profesional que se encargará de transformar tu estilo hoy.</p></div>

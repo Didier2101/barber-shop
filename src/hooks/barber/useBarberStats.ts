@@ -1,16 +1,28 @@
 'use client';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { startOfDay, endOfDay } from 'date-fns';
+import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
 
-export function useBarberStats(barberId: string, filter: 'today' | 'custom', range?: { from: Date, to?: Date }) {
+type TimeFilter = 'today' | 'week' | 'month' | 'year' | 'custom';
+
+export function useBarberStats(barberId: string, filter: TimeFilter, range?: { from: Date, to?: Date }) {
   return useQuery({
     queryKey: ['barber-stats', barberId, filter, range],
     queryFn: async () => {
-      let start = startOfDay(new Date());
-      let end = endOfDay(new Date());
+      const now = new Date();
+      let start = startOfDay(now);
+      let end = endOfDay(now);
 
-      if (filter === 'custom' && range?.from) {
+      if (filter === 'week') {
+        start = startOfWeek(now, { weekStartsOn: 1 });
+        end = endOfWeek(now, { weekStartsOn: 1 });
+      } else if (filter === 'month') {
+        start = startOfMonth(now);
+        end = endOfMonth(now);
+      } else if (filter === 'year') {
+        start = startOfYear(now);
+        end = endOfYear(now);
+      } else if (filter === 'custom' && range?.from) {
         start = startOfDay(range.from);
         end = range.to ? endOfDay(range.to) : endOfDay(range.from);
       }

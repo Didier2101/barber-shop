@@ -11,7 +11,6 @@ export function useBarberClients(barberId: string) {
         .select(`*, client:client_id(name, phone, avatar_url)`)
         .eq('barber_id', barberId)
         .eq('status', 'completed')
-        .not('client_id', 'is', null) // Solo clientes con cuenta real
         .order('start_time', { ascending: false });
 
       if (!apts) return [];

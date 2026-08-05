@@ -5,7 +5,6 @@ import {
   Trash, 
   Clock, 
   DollarSign,
-  Tag,
   Plus,
   Edit
 } from 'lucide-react';
@@ -13,6 +12,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import Swal from 'sweetalert2';
 import { Service } from '@/types';
+import { formatPrice } from '@/lib/format';
 
 export default function ServicesPage() {
   const { data: baseData, isLoading: baseLoading } = useOwnerBaseData();
@@ -93,7 +93,7 @@ export default function ServicesPage() {
                                   <div className="w-1 h-1 bg-white/10 rounded-full" />
                                   <div className="flex items-center gap-1.5 text-[10px] font-bold text-white uppercase tracking-wider">
                                      <DollarSign size={12} className="text-brand" />
-                                     <span>${new Intl.NumberFormat('de-DE').format(service.price)}</span>
+                                     <span>{formatPrice(service.price)}</span>
                                   </div>
                                </div>
                             </div>

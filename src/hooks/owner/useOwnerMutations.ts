@@ -1,7 +1,7 @@
 'use client';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { Service, Promotion } from '@/types';
+import { Promotion } from '@/types';
 import { toast } from 'sonner';
 
 export function useOwnerMutations() {
@@ -139,8 +139,8 @@ export function useOwnerMutations() {
   });
 
   const updateLoyalty = useMutation({
-    mutationFn: async (settings: { 
-      appointments_threshold: number; 
+    mutationFn: async (settings: {
+      appointments_threshold: number;
       is_enabled: boolean;
       start_date?: string;
       end_date?: string;
@@ -209,7 +209,7 @@ export function useOwnerMutations() {
   });
 
   const createBarber = useMutation({
-    mutationFn: async (barber: { name: string; email: string; password?: string; commission_percentage?: number }) => {
+    mutationFn: async (barber: { name: string; email: string; password?: string; commission_percentage?: number; phone: string; address?: string }) => {
       const response = await fetch('/api/admin/create-user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -230,22 +230,50 @@ export function useOwnerMutations() {
     }
   });
 
-  return { 
-    createService, 
+  const updateBarberServices = useMutation({
+    mutationFn: async ({ barber_id, service_ids }: { barber_id: string; service_ids: string[] }) => {
+      const { error: deleteError } = await supabase
+        .from('barber_services')
+        .delete()
+        .eq('barber_id', barber_id);
+
+      if (deleteError) throw deleteError;
+
+      if (service_ids.length > 0) {
+        const inserts = service_ids.map(service_id => ({ barber_id, service_id }));
+        const { error: insertError } = await supabase
+          .from('barber_services')
+          .insert(inserts);
+
+        if (insertError) throw insertError;
+      }
+    },
+    onSuccess: () => {
+      toast.success('Especialidades actualizadas correctamente');
+      queryClient.invalidateQueries({ queryKey: ['owner-base-data'] });
+    },
+    onError: (err: Error) => {
+      toast.error('Error al actualizar especialidades: ' + err.message);
+    }
+  });
+
+  return {
+    createService,
     updateService,
-    deleteService, 
-    createExpense, 
-    updateExpense, 
-    deleteExpense, 
-    createCategory, 
-    deleteCategory, 
-    createSettlement, 
+    deleteService,
+    createExpense,
+    updateExpense,
+    deleteExpense,
+    createCategory,
+    deleteCategory,
+    createSettlement,
     updateLoyalty,
     deleteClient: deleteUserStrict, toggleClientStatus,
     deleteUserStrict,
     createPromotion,
     updatePromotion,
     deletePromotion,
-    createBarber
+    createBarber,
+    updateBarberServices
   };
 }

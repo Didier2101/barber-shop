@@ -2,10 +2,12 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
-import { Star, Scissors, Sparkles, ChevronRight, Calendar, Gift } from 'lucide-react';
+import { Star, Scissors, Sparkles, ChevronRight, Calendar, Gift, Clock } from 'lucide-react';
 import { format } from 'date-fns';
-import { Promotion, LoyaltySettings } from '@/types';
+import { Promotion, LoyaltySettings, Service } from '@/types';
+import { formatPrice } from '@/lib/format';
 
 export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -14,6 +16,20 @@ export default function Home() {
   const [activePromos, setActivePromos] = useState<Promotion[]>([]);
   const [loyalty, setLoyalty] = useState<LoyaltySettings | null>(null);
   const [showFullRules, setShowFullRules] = useState(false);
+
+  const { data: services = [] } = useQuery({
+    queryKey: ['public-services'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('services')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      return (data || []) as Service[];
+    },
+    staleTime: 1000 * 60 * 60, // 1 hour
+  });
 
   useEffect(() => {
     async function loadData() {
@@ -144,7 +160,7 @@ export default function Home() {
                       </div>
                       <div className="text-5xl font-black text-[#f59e0b] italic tracking-tighter">
                          {promo.discount_type === 'percentage' ? `${promo.discount_value}%` : 
-                          promo.discount_type === 'fixed' ? `$${new Intl.NumberFormat('de-DE').format(promo.discount_value)}` : 'FREE'}
+                          promo.discount_type === 'fixed' ? `{formatPrice(promo.discount_value)}` : 'FREE'}
                          <span className="text-xs uppercase not-italic ml-2 opacity-50 tracking-widest">Off</span>
                       </div>
                    </div>
@@ -167,19 +183,19 @@ export default function Home() {
       {loyalty && loyalty.is_enabled && (
         <section className="py-24 bg-[#0a0a0a]">
           <div className="container mx-auto px-6">
-            <div className="bg-gradient-to-br from-zinc-900 to-black border border-white/5 rounded-[4rem] p-12 md:p-20 relative overflow-hidden group">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center relative z-10">
-                  <div className="space-y-8">
-                      <div className="inline-flex items-center gap-4 bg-amber-500/10 px-6 py-2 rounded-full text-amber-500 border border-amber-500/20">
-                        <Gift size={16} />
+            <div className="bg-gradient-to-br from-zinc-900 to-black border border-white/5 rounded-[3rem] p-8 md:p-12 relative overflow-hidden group">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center relative z-10">
+                  <div className="space-y-6">
+                      <div className="inline-flex items-center gap-3 bg-amber-500/10 px-5 py-2 rounded-full text-amber-500 border border-amber-500/20">
+                        <Gift size={14} />
                         <span className="text-[10px] font-black uppercase tracking-widest text-amber-500">Programa Elite Rewards</span>
                       </div>
-                      <h2 className="text-5xl md:text-7xl font-black uppercase tracking-tighter italic text-white leading-none">
+                      <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tighter italic text-white leading-none">
                         Tu Lealtad <br />
                         Tiene <span className="text-[#f59e0b]">Premio</span>
                       </h2>
-                      <div className="space-y-4">
-                        <p className={`text-white/40 text-lg md:text-xl font-medium max-w-md italic leading-relaxed ${!showFullRules ? 'line-clamp-3' : ''}`}>
+                      <div className="space-y-3">
+                        <p className={`text-white/40 text-base font-medium max-w-md italic leading-relaxed ${!showFullRules ? 'line-clamp-3' : ''}`}>
                           {loyalty.description || 'Únete a nuestro club exclusivo. Cada visita te acerca más a tu próximo servicio de lujo totalmente gratis.'}
                         </p>
                         {loyalty.description && (
@@ -192,60 +208,59 @@ export default function Home() {
                           </button>
                         )}
                       </div>
-                      <div className="flex items-center gap-4 text-xs font-black uppercase tracking-widest text-zinc-500">
-                         <Calendar size={14} className="text-amber-500" />
+                      <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                         <Calendar size={12} className="text-amber-500" />
                          Válido hasta {loyalty.end_date ? format(new Date(loyalty.end_date), 'dd MMM yyyy') : 'Aviso previo'}
                       </div>
                   </div>
-                  <div className="relative aspect-square flex items-center justify-center">
-                      <div className="absolute inset-0 bg-[#f59e0b]/10 blur-[120px] rounded-full animate-pulse" />
-                      <Scissors size={200} className="text-white/5 rotate-12" />
-                      <div className="absolute bg-white/[0.03] backdrop-blur-3xl border border-white/10 p-10 rounded-[3rem] shadow-2xl rotate-[-5deg] text-center">
-                        <div className="flex justify-center mb-4">
-                           <Star size={60} className="text-[#f59e0b]" fill="currentColor" />
+                  <div className="relative aspect-square max-w-[250px] mx-auto flex items-center justify-center">
+                      <div className="absolute inset-0 bg-[#f59e0b]/10 blur-[80px] rounded-full animate-pulse" />
+                      <Scissors size={100} className="text-white/5 rotate-12" />
+                      <div className="absolute bg-white/[0.03] backdrop-blur-3xl border border-white/10 p-6 rounded-[2rem] shadow-2xl rotate-[-5deg] text-center w-full">
+                        <div className="flex justify-center mb-3">
+                           <Star size={40} className="text-[#f59e0b]" fill="currentColor" />
                         </div>
-                        <p className="text-white text-5xl font-black uppercase italic tracking-tighter mb-2">
-                           {loyalty.appointments_threshold} <span className="text-lg">Citas</span>
+                        <p className="text-white text-3xl font-black uppercase italic tracking-tighter mb-1">
+                           {loyalty.appointments_threshold} <span className="text-sm">Citas</span>
                         </p>
-                        <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em]">Para tu servicio GRATIS</p>
+                        <p className="text-[8px] font-black text-white/40 uppercase tracking-[0.3em]">Para tu servicio GRATIS</p>
                       </div>
                   </div>
                 </div>
-                <div className="absolute -right-20 -bottom-20 opacity-[0.02] pointer-events-none">
-                   <Star size={400} className="text-white" />
+                <div className="absolute -right-10 -bottom-10 opacity-[0.02] pointer-events-none">
+                   <Star size={200} className="text-white" />
                 </div>
             </div>
           </div>
         </section>
       )}
 
-      {/* EXPLORE SECTION */}
-      <section className="py-32 bg-[#050505]">
-        <div className="container mx-auto px-6">
-          <div className="flex flex-col items-center text-center mb-20">
-            <h2 className="uppercase font-black text-4xl md:text-7xl tracking-tighter mb-6 text-white italic">
-              Vive La <span className="text-[#f59e0b]">Experiencia</span>
-            </h2>
+      {/* SUBTLE SERVICES SECTION */}
+      {services.length > 0 && (
+        <section className="py-24 bg-[#030303] relative border-t border-white/5">
+          <div className="container mx-auto px-6">
+            <div className="flex flex-col items-center text-center mb-16">
+              <p className="text-[#f59e0b] text-[10px] uppercase tracking-[0.4em] font-black mb-4">Nuestro Arte</p>
+              <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tighter italic text-white">Servicios <span className="text-white/40">Exclusivos</span></h2>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-6xl mx-auto">
+              {services.map(service => (
+                <div key={service.id} className="p-6 rounded-3xl border border-white/5 bg-white/[0.01] hover:bg-white/[0.03] transition-all flex flex-col gap-4">
+                   <div className="flex justify-between items-start">
+                     <h3 className="text-white font-bold uppercase tracking-wide text-sm">{service.name}</h3>
+                     <span className="text-[#f59e0b] font-black italic">{formatPrice(service.price)}</span>
+                   </div>
+                   <div className="flex items-center gap-2 text-[10px] text-white/40 uppercase tracking-widest font-bold">
+                     <Clock size={12} />
+                     {service.duration} Minutos
+                   </div>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <Link href="/servicios" className="group p-12 rounded-[3rem] border border-white/5 bg-white/[0.02] hover:border-[#f59e0b]/50 transition-all relative overflow-hidden">
-              <p className="text-[#f59e0b] text-[10px] uppercase tracking-[0.4em] font-black mb-6">El Arte</p>
-              <h3 className="text-white text-3xl font-black uppercase tracking-tight italic">Servicios</h3>
-              <ChevronRight className="absolute bottom-10 right-10 text-white/10 group-hover:text-[#f59e0b] transition-colors" size={40} />
-            </Link>
-            <Link href="/barberos" className="group p-12 rounded-[3rem] border border-white/5 bg-white/[0.02] hover:border-[#f59e0b]/50 transition-all relative overflow-hidden">
-              <p className="text-[#f59e0b] text-[10px] uppercase tracking-[0.4em] font-black mb-6">Los Maestros</p>
-              <h3 className="text-white text-3xl font-black uppercase tracking-tight italic">Barberos</h3>
-              <ChevronRight className="absolute bottom-10 right-10 text-white/10 group-hover:text-[#f59e0b] transition-colors" size={40} />
-            </Link>
-            <Link href="/nosotros" className="group p-12 rounded-[3rem] border border-white/5 bg-white/[0.02] hover:border-[#f59e0b]/50 transition-all relative overflow-hidden">
-              <p className="text-[#f59e0b] text-[10px] uppercase tracking-[0.4em] font-black mb-6">Nuestra Alma</p>
-              <h3 className="text-white text-3xl font-black uppercase tracking-tight italic">Nosotros</h3>
-              <ChevronRight className="absolute bottom-10 right-10 text-white/10 group-hover:text-[#f59e0b] transition-colors" size={40} />
-            </Link>
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
     </main>
   );

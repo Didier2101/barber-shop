@@ -5,7 +5,6 @@ import {
    Search,
    Phone,
    CalendarDays,
-   Trash,
    Activity,
    History,
    Scissors,
@@ -20,19 +19,20 @@ import Swal from 'sweetalert2';
 import { format } from 'date-fns';
 import { Appointment, Profile } from '@/types';
 import { toast } from 'sonner';
+import { formatPrice } from '@/lib/format';
 
 export default function ClientsPage() {
    const [page, setPage] = useState(1);
    const [searchTerm, setSearchTerm] = useState('');
    const limit = 10;
-   
+
    // Hacemos el debounce del término de búsqueda manualmente o lo pasamos directo.
    // Pasarlo directo causará peticiones en cada tipeo, pero React Query lo manejará bien.
    const { data: paginatedData, isLoading: clientsLoading } = useOwnerClientsPaginated(page, limit, searchTerm);
-   
+
    const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
    const { data: clientDetails, isLoading: detailsLoading } = useClientDetails(selectedClientId);
-   
+
    const { toggleClientStatus } = useOwnerMutations();
 
    const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -52,7 +52,7 @@ export default function ClientsPage() {
                   <h2 className="text-3xl font-bold tracking-tight text-white uppercase">Clientes</h2>
                </div>
             </div>
-            
+
             <div className="relative group shadow-xl w-full md:w-96">
                <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
                   <Search size={16} className="text-white/40 group-focus-within:text-brand transition-colors" />
@@ -111,7 +111,7 @@ export default function ClientsPage() {
 
                   {/* Paginación */}
                   <div className="p-4 border-t border-white/5 flex items-center justify-between bg-bg-base">
-                     <button 
+                     <button
                         disabled={page === 1}
                         onClick={() => setPage(p => p - 1)}
                         className="p-2 text-white/40 hover:text-white disabled:opacity-20 transition-all"
@@ -121,7 +121,7 @@ export default function ClientsPage() {
                      <span className="text-[10px] font-medium text-white/40 uppercase tracking-widest">
                         Página {page} de {paginatedData?.totalPages || 1}
                      </span>
-                     <button 
+                     <button
                         disabled={page === (paginatedData?.totalPages || 1) || paginatedData?.totalPages === 0}
                         onClick={() => setPage(p => p + 1)}
                         className="p-2 text-white/40 hover:text-white disabled:opacity-20 transition-all"
@@ -215,26 +215,26 @@ export default function ClientsPage() {
                                  <h4 className="text-[11px] font-bold text-white uppercase tracking-widest">Últimos Servicios</h4>
                               </div>
                               <div className="flex flex-col gap-2 flex-1">
-                                  {(clientDetails?.appointments || []).length === 0 ? (
-                                     <div className="py-12 text-center opacity-40">
+                                 {(clientDetails?.appointments || []).length === 0 ? (
+                                    <div className="py-12 text-center opacity-40">
                                        <p className="text-[10px] font-medium uppercase tracking-wider">Sin actividad previa</p>
-                                     </div>
-                                  ) : (
-                                     (clientDetails?.appointments || []).slice(0, 5).map((apt: Appointment & { service: { name: string } }) => (
-                                        <div 
-                                          key={apt.id} 
+                                    </div>
+                                 ) : (
+                                    (clientDetails?.appointments || []).slice(0, 5).map((apt: Appointment & { service: { name: string } }) => (
+                                       <div
+                                          key={apt.id}
                                           className="flex justify-between items-center p-4 bg-bg-base border border-white/5 rounded-xl transition-all hover:border-white/10"
-                                        >
-                                           <div>
-                                              <p className="text-sm font-bold text-white uppercase tracking-tight mb-1">{apt.service?.name || 'Servicio'}</p>
-                                              <p className="text-[9px] text-white/40 font-medium uppercase tracking-wider">{format(new Date(apt.start_time), 'dd MMM, yyyy')}</p>
-                                           </div>
-                                           <div className="text-right">
-                                              <p className="text-sm font-bold text-white tracking-tight leading-none">$${new Intl.NumberFormat('de-DE').format(apt.price)}</p>
-                                           </div>
-                                        </div>
-                                     ))
-                                  )}
+                                       >
+                                          <div>
+                                             <p className="text-sm font-bold text-white uppercase tracking-tight mb-1">{apt.service?.name || 'Servicio'}</p>
+                                             <p className="text-[9px] text-white/40 font-medium uppercase tracking-wider">{format(new Date(apt.start_time), 'dd MMM, yyyy')}</p>
+                                          </div>
+                                          <div className="text-right">
+                                             <p className="text-sm font-bold text-white tracking-tight leading-none">{formatPrice(apt.price)}</p>
+                                          </div>
+                                       </div>
+                                    ))
+                                 )}
                               </div>
                            </div>
 
@@ -249,7 +249,7 @@ export default function ClientsPage() {
                               </div>
                               <div className="pt-8 border-t border-white/5 relative z-10">
                                  <p className="text-[10px] font-bold text-brand uppercase tracking-widest mb-2">Volumen de Compra</p>
-                                 <p className="text-2xl font-bold text-white tracking-tighter leading-none">$${new Intl.NumberFormat('de-DE').format((clientDetails?.appointments || []).reduce((s: number, a: Appointment) => s + a.price, 0))}</p>
+                                 <p className="text-2xl font-bold text-white tracking-tighter leading-none">{formatPrice((clientDetails?.appointments || []).reduce((s: number, a: Appointment) => s + a.price, 0))}</p>
                               </div>
                               <Scissors size={150} className="absolute -bottom-10 -left-10 opacity-5 text-brand -rotate-12" />
                            </div>

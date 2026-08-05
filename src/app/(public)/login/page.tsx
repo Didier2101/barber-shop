@@ -5,6 +5,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { User, Lock, Scissors, LogIn, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useGlobalStore } from '@/store/useGlobalStore';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 
 function toFriendlyAuthError(message: string) {
   const normalized = message.toLowerCase();
@@ -15,27 +18,31 @@ function toFriendlyAuthError(message: string) {
   return 'No pudimos iniciar sesión. Intenta nuevamente.';
 }
 
+const loginSchema = z.object({
+  identifier: z.string().min(1, 'Ingresa tu número o correo.'),
+  password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres.'),
+});
+
+type LoginForm = z.infer<typeof loginSchema>;
+
 export default function Login() {
   const router = useRouter();
   const setUserProfile = useGlobalStore(state => state.setUserProfile);
-  const [identifier, setIdentifier] = useState('');
-  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [globalError, setGlobalError] = useState('');
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-
-    const normalizedIdentifier = identifier.trim();
-    if (!normalizedIdentifier || password.trim().length < 6) {
-      setLoading(false);
-      setError('Ingresa credenciales válidas. La contraseña debe tener al menos 6 caracteres.');
-      return;
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginForm>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      identifier: '',
+      password: ''
     }
-    
+  });
+
+  const onSubmit = async (data: LoginForm) => {
+    setGlobalError('');
+
+    const normalizedIdentifier = data.identifier.trim();
     const loginEmail = normalizedIdentifier.includes('@')
       ? normalizedIdentifier
       : `${normalizedIdentifier.replace(/\s+/g, '')}@barbershop.local`;
@@ -43,19 +50,15 @@ export default function Login() {
     try {
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: loginEmail,
-        password,
+        password: data.password,
       });
 
       if (authError) {
-        setLoading(false);
-        setError(toFriendlyAuthError(authError.message));
-        return;
+        return setGlobalError(toFriendlyAuthError(authError.message));
       }
 
       if (!authData?.user) {
-        setLoading(false);
-        setError('No se pudo verificar tu sesión. Intenta de nuevo.');
-        return;
+        return setGlobalError('No se pudo verificar tu sesión. Intenta de nuevo.');
       }
 
       const { data: profile, error: profileError } = await supabase
@@ -65,9 +68,12 @@ export default function Login() {
         .single();
 
       if (profileError || !profile) {
-        setLoading(false);
-        setError('No se encontró el perfil vinculado a esta cuenta.');
-        return;
+        return setGlobalError('No se encontró el perfil vinculado a esta cuenta.');
+      }
+
+      if (profile.is_active === false) {
+        await supabase.auth.signOut();
+        return setGlobalError('Tu cuenta ha sido desactivada. Contacta al administrador.');
       }
 
       setUserProfile(profile);
@@ -78,8 +84,7 @@ export default function Login() {
       else router.push(`/dashboard/client/${profile.id}`);
 
     } catch {
-      setLoading(false);
-      setError('Error de conexión inesperado.');
+      setGlobalError('Error de conexión inesperado.');
     }
   };
 
@@ -119,26 +124,25 @@ export default function Login() {
                    <p className="text-[10px] text-white/40 uppercase tracking-widest mt-2">Ingresa tus credenciales</p>
                 </div>
 
-                {error && (
+                {globalError && (
                   <div className="bg-red-500/10 border border-red-500/30 text-red-200 px-5 py-4 rounded-2xl mb-6 text-xs font-bold animate-in fade-in slide-in-from-top-2">
-                    {error}
+                    {globalError}
                   </div>
                 )}
 
-                <form onSubmit={handleLogin} className="space-y-5">
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-black uppercase tracking-[0.2em] text-[#f59e0b] ml-1">Celular o Email</label>
                     <div className="relative group">
                       <User size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 group-focus-within:text-[#f59e0b] transition-colors" />
                       <input
                         type="text"
-                        className="w-full h-13 bg-white/5 border border-white/10 rounded-2xl pl-12 pr-4 text-white text-sm focus:outline-none focus:border-[#f59e0b] transition-all font-medium"
+                        {...register('identifier')}
+                        className={`w-full h-13 bg-white/5 border ${errors.identifier ? 'border-red-500/50' : 'border-white/10'} rounded-2xl pl-12 pr-4 text-white text-sm focus:outline-none focus:border-[#f59e0b] transition-all font-medium`}
                         placeholder="Número o correo"
-                        value={identifier}
-                        onChange={e => setIdentifier(e.target.value)}
-                        required
                       />
                     </div>
+                    {errors.identifier && <p className="text-red-400 text-xs mt-1 ml-1 font-medium">{errors.identifier.message}</p>}
                   </div>
 
                   <div className="space-y-1.5">
@@ -147,11 +151,9 @@ export default function Login() {
                       <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 group-focus-within:text-[#f59e0b] transition-colors" />
                       <input
                         type={showPassword ? 'text' : 'password'}
-                        className="w-full h-13 bg-white/5 border border-white/10 rounded-2xl pl-12 pr-12 text-white text-sm focus:outline-none focus:border-[#f59e0b] transition-all font-medium"
+                        {...register('password')}
+                        className={`w-full h-13 bg-white/5 border ${errors.password ? 'border-red-500/50' : 'border-white/10'} rounded-2xl pl-12 pr-12 text-white text-sm focus:outline-none focus:border-[#f59e0b] transition-all font-medium`}
                         placeholder="••••••••"
-                        value={password}
-                        onChange={e => setPassword(e.target.value)}
-                        required
                       />
                       <button
                         type="button"
@@ -161,14 +163,15 @@ export default function Login() {
                         {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
                     </div>
+                    {errors.password && <p className="text-red-400 text-xs mt-1 ml-1 font-medium">{errors.password.message}</p>}
                   </div>
 
                   <button
                     type="submit"
-                    disabled={loading}
+                    disabled={isSubmitting}
                     className="w-full bg-[#f59e0b] hover:bg-white text-black h-14 rounded-2xl font-black uppercase tracking-widest text-[11px] transition-all flex items-center justify-center gap-3 active:scale-[0.98] disabled:opacity-50 shadow-xl shadow-amber-500/10"
                   >
-                    {loading ? (
+                    {isSubmitting ? (
                       <Loader2 size={18} className="animate-spin" />
                     ) : (
                       <>

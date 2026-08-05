@@ -16,6 +16,7 @@ import 'react-day-picker/dist/style.css';
 import { useGlobalStore } from '@/store/useGlobalStore';
 import { Appointment, Settlement } from '@/types';
 import Image from 'next/image';
+import { formatPrice } from '@/lib/format';
 import { motion } from 'framer-motion';
 
 export default function BarberStatsPage() {
@@ -23,7 +24,7 @@ export default function BarberStatsPage() {
    const barberId = params.id as string;
    const userProfile = useGlobalStore(state => state.userProfile);
 
-   const [timeFilter, setTimeFilter] = useState<'today' | 'custom'>('today');
+   const [timeFilter, setTimeFilter] = useState<'today' | 'week' | 'month' | 'year' | 'custom'>('today');
    const [range, setRange] = useState<DateRange | undefined>();
    const [showCalendar, setShowCalendar] = useState(false);
 
@@ -62,19 +63,23 @@ export default function BarberStatsPage() {
                <p className="text-[#f59e0b] text-[8px] md:text-[10px] font-black uppercase tracking-[0.4em]">Finanzas y Rendimiento</p>
                <h1 className="text-2xl md:text-4xl font-black uppercase tracking-tighter italic leading-none text-white">Mi Billetera</h1>
             </div>
-            <div className="flex bg-white/5 p-1 rounded-2xl border border-white/5 backdrop-blur-xl">
-               <button
-                  onClick={() => { setTimeFilter('today'); setRange(undefined); }}
-                  className={`px-8 py-3 text-[10px] font-black uppercase tracking-widest transition-all rounded-xl ${timeFilter === 'today' ? 'bg-[#f59e0b] text-black shadow-lg' : 'text-white/40 hover:text-white'}`}
-               >
-                  Hoy
-               </button>
+            
+            <div className="flex flex-wrap items-center gap-2 bg-white/5 p-1.5 rounded-2xl border border-white/5 backdrop-blur-xl">
+               {(['today', 'week', 'month', 'year'] as const).map(f => (
+                 <button
+                   key={f}
+                   onClick={() => { setTimeFilter(f); setRange(undefined); }}
+                   className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all rounded-xl ${timeFilter === f ? 'bg-[#f59e0b] text-black shadow-lg' : 'text-white/40 hover:text-white'}`}
+                 >
+                   {f === 'today' ? 'Hoy' : f === 'week' ? 'Semana' : f === 'month' ? 'Mes' : 'Año'}
+                 </button>
+               ))}
                <button
                   onClick={() => setShowCalendar(true)}
-                  className={`px-8 py-3 text-[10px] font-black uppercase tracking-widest transition-all rounded-xl flex items-center gap-3 ${timeFilter === 'custom' ? 'bg-[#f59e0b] text-black shadow-lg' : 'text-white/40 hover:text-white'}`}
+                  className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all rounded-xl flex items-center gap-2 ${timeFilter === 'custom' ? 'bg-[#f59e0b] text-black shadow-lg' : 'text-white/40 hover:text-white'}`}
                >
                   <Calendar size={14} />
-                  {timeFilter === 'custom' && range?.from ? `${format(range.from, 'dd MMM')}...` : 'Filtrar'}
+                  {timeFilter === 'custom' && range?.from ? `${format(range.from, 'dd MMM')}` : 'Filtro'}
                </button>
             </div>
          </div>
@@ -87,7 +92,7 @@ export default function BarberStatsPage() {
                className="bg-black/80 border border-white/10 backdrop-blur-2xl rounded-t-2xl p-4 md:p-5 relative overflow-hidden group"
             >
                <p className="text-[8px] font-black uppercase tracking-widest text-white/30 mb-1">Total Bruto</p>
-               <p className="text-xl md:text-2xl font-black italic text-white tracking-tighter leading-none">${new Intl.NumberFormat('de-DE').format(currentStats.income)}</p>
+               <p className="text-xl md:text-2xl font-black italic text-white tracking-tighter leading-none">{formatPrice(currentStats.income)}</p>
                <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between">
                   <span className="text-[7px] font-black uppercase tracking-widest text-[#f59e0b]">{currentStats.serviceCount} Servicios</span>
                </div>
@@ -100,7 +105,7 @@ export default function BarberStatsPage() {
                className="bg-black/80 border border-white/10 backdrop-blur-2xl p-4 md:p-5 relative overflow-hidden group"
             >
                <p className="text-[8px] font-black uppercase tracking-widest text-emerald-500 mb-1">Mi Ganancia ({commission}%)</p>
-               <p className="text-xl md:text-2xl font-black italic text-white tracking-tighter leading-none">${new Intl.NumberFormat('de-DE').format(currentStats.barberEarnings)}</p>
+               <p className="text-xl md:text-2xl font-black italic text-white tracking-tighter leading-none">{formatPrice(currentStats.barberEarnings)}</p>
             </motion.div>
 
             <motion.div
@@ -110,7 +115,7 @@ export default function BarberStatsPage() {
                className="bg-black/80 border border-white/10 backdrop-blur-2xl rounded-b-2xl p-4 md:p-5 relative overflow-hidden group"
             >
                <p className="text-[8px] font-black uppercase tracking-widest text-amber-500 mb-1">Aporte Local</p>
-               <p className="text-xl md:text-2xl font-black italic text-white tracking-tighter leading-none">${new Intl.NumberFormat('de-DE').format(currentStats.shopEarnings)}</p>
+               <p className="text-xl md:text-2xl font-black italic text-white tracking-tighter leading-none">{formatPrice(currentStats.shopEarnings)}</p>
             </motion.div>
          </div>
 
@@ -127,7 +132,7 @@ export default function BarberStatsPage() {
                      className="bg-black/80 border border-white/10 backdrop-blur-2xl rounded-t-2xl p-4 md:p-5 space-y-2"
                   >
                      <p className="text-[8px] font-black uppercase tracking-widest text-[#f59e0b]">Por Cobrar</p>
-                     <p className="text-xl md:text-2xl font-black italic text-white tracking-tighter leading-none">${new Intl.NumberFormat('de-DE').format(myPendingEarnings)}</p>
+                     <p className="text-xl md:text-2xl font-black italic text-white tracking-tighter leading-none">{formatPrice(myPendingEarnings)}</p>
                      <div className="h-px bg-white/5 w-full mt-2" />
                      <p className="text-[7px] font-black text-white/30 uppercase tracking-widest">{pendingApps.length} servicios pendientes</p>
                   </motion.div>
@@ -137,7 +142,7 @@ export default function BarberStatsPage() {
                      className="bg-black/80 border border-white/10 backdrop-blur-2xl rounded-b-2xl p-4 md:p-5 space-y-2"
                   >
                      <p className="text-[8px] font-black uppercase tracking-widest text-emerald-500">Ya Recibido</p>
-                     <p className="text-xl md:text-2xl font-black italic text-white tracking-tighter leading-none">${new Intl.NumberFormat('de-DE').format(myAlreadySettledEarnings)}</p>
+                     <p className="text-xl md:text-2xl font-black italic text-white tracking-tighter leading-none">{formatPrice(myAlreadySettledEarnings)}</p>
                      <div className="h-px bg-white/5 w-full mt-2" />
                      <p className="text-[7px] font-black text-white/30 uppercase tracking-widest">Liquidado</p>
                   </motion.div>
@@ -172,7 +177,7 @@ export default function BarberStatsPage() {
                                     </div>
                                  </div>
                               </div>
-                              <p className="text-[11px] font-black italic text-[#f59e0b]">${new Intl.NumberFormat('de-DE').format((Number(apt.price) * commission) / 100)}</p>
+                              <p className="text-[11px] font-black italic text-[#f59e0b]">{formatPrice((Number(apt.price) * commission) / 100)}</p>
                            </div>
                         ))
                      )}
@@ -207,7 +212,7 @@ export default function BarberStatsPage() {
                                     <p className="text-[11px] font-black text-white uppercase tracking-tight italic">Cierre Efectuado</p>
                                  </div>
                                  <div className="text-right">
-                                    <p className="text-lg font-black italic text-emerald-500 leading-none">${new Intl.NumberFormat('de-DE').format(s.barber_earnings)}</p>
+                                    <p className="text-lg font-black italic text-emerald-500 leading-none">{formatPrice(s.barber_earnings)}</p>
                                  </div>
                               </div>
                            </div>

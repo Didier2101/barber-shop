@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { formatPrice } from '@/lib/format';
 import { useBarberAgenda, useUpdateAppointmentStatus } from '@/hooks/barber';
 import { 
   Calendar, 
@@ -56,7 +57,8 @@ export default function BarberAgendaPage() {
     });
 
     if (reason) {
-      statusMutation.mutate({ id: apt.id, status: 'cancelled', barberId, notes: reason }, {
+      const finalReason = `[Cancelado por Barbero]: ${reason}`;
+      statusMutation.mutate({ id: apt.id, status: 'cancelled', barberId, notes: finalReason }, {
         onSuccess: () => {
           toast.error('Cita cancelada');
           const clientPhone = apt.client?.phone || apt.client_phone;
@@ -149,7 +151,7 @@ export default function BarberAgendaPage() {
                           <h4 className="text-[13px] font-black text-white uppercase tracking-tight italic leading-none truncate">{apt.client?.name || apt.client_name}</h4>
                           <div className="flex items-center gap-3 text-[#f59e0b] text-[8px] font-black uppercase tracking-widest mt-1.5">
                              <div className="flex items-center gap-1"><Clock size={10} /><span>{format(new Date(apt.start_time), 'HH:mm')}</span></div>
-                             <span className="text-white/20">${new Intl.NumberFormat('de-DE').format(apt.price)}</span>
+                             <span className="text-white/20">{formatPrice(apt.price)}</span>
                           </div>
                        </div>
                     </div>
@@ -190,7 +192,7 @@ export default function BarberAgendaPage() {
                             </div>
                          </div>
                          <div className="flex items-center justify-between md:justify-end gap-6 border-t md:border-t-0 border-white/5 pt-3 md:pt-0">
-                            <p className="text-lg font-black italic text-white tracking-tighter leading-none">${new Intl.NumberFormat('de-DE').format(apt.price)}</p>
+                            <p className="text-lg font-black italic text-white tracking-tighter leading-none">{formatPrice(apt.price)}</p>
                             <div className="flex gap-2">
                                {apt.status === 'confirmed' && (
                                   <>
@@ -201,6 +203,25 @@ export default function BarberAgendaPage() {
                             </div>
                          </div>
                       </div>
+
+                      {apt.status === 'cancelled' && apt.notes && (
+                        <div className="w-full mt-4 bg-red-500/10 border border-red-500/20 rounded-xl p-3">
+                           <p className="text-[9px] font-black uppercase tracking-widest text-red-500 mb-1">
+                              {apt.notes.startsWith('[Cancelado por Cliente]:') 
+                                 ? 'Cancelado por el Cliente' 
+                                 : apt.notes.startsWith('[Cancelado por Barbero]:') 
+                                    ? 'Cancelado por ti'
+                                    : 'Motivo de Cancelación'}
+                           </p>
+                           <p className="text-xs text-white/80 italic">
+                              {apt.notes.startsWith('[Cancelado por Cliente]:') 
+                                 ? `El cliente canceló porque: ${apt.notes.replace('[Cancelado por Cliente]:', '').trim()}`
+                                 : apt.notes.startsWith('[Cancelado por Barbero]:') 
+                                    ? `Tú cancelaste porque: ${apt.notes.replace('[Cancelado por Barbero]:', '').trim()}`
+                                    : apt.notes}
+                           </p>
+                        </div>
+                      )}
                    </motion.div>
                ))
             )}
@@ -223,7 +244,7 @@ export default function BarberAgendaPage() {
                                <div className="min-w-0"><p className="text-sm font-black text-white uppercase tracking-tight truncate leading-none mb-1">{apt.client?.name || apt.client_name}</p></div>
                             </div>
                             <div className="flex items-center gap-6 justify-between w-full sm:w-auto border-t sm:border-t-0 border-white/5 pt-3 sm:pt-0">
-                               <p className="text-lg font-black italic text-white tracking-tighter leading-none">${new Intl.NumberFormat('de-DE').format(apt.price)}</p>
+                               <p className="text-lg font-black italic text-white tracking-tighter leading-none">{formatPrice(apt.price)}</p>
                                <button onClick={() => handleCancel(apt)} className="w-9 h-9 rounded-xl bg-red-500/5 text-red-500/20 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center border border-white/5"><X size={16} /></button>
                             </div>
                          </div>

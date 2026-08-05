@@ -29,8 +29,8 @@ export default function PrivateLayout({ children }: { children: React.ReactNode 
         .eq('id', session.user.id)
         .maybeSingle(); // maybeSingle returns null (not error) if no row found
 
-      // If profile was deleted or doesn't exist, wipe and redirect
-      if (profileError || !profile) {
+      // If profile was deleted, doesn't exist, or is inactive, wipe and redirect
+      if (profileError || !profile || profile.is_active === false) {
         clearStore();
         document.cookie = "barbershop-auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
         await supabase.auth.signOut();

@@ -1,9 +1,7 @@
 'use client';
 import { useOwnerBaseData, useOwnerMutations } from '@/hooks/owner';
 import { 
-  Sparkles, 
   Gift, 
-  Activity, 
   Trash, 
   Clock,
   Edit,
@@ -13,7 +11,6 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import Swal from 'sweetalert2';
-import Link from 'next/link';
 import { PromotionForm } from '@/components/forms/PromotionForm';
 import { useState } from 'react';
 import { Promotion } from '@/types';
@@ -26,7 +23,6 @@ export default function PromotionsPage() {
   const [isCreating, setIsCreating] = useState(false);
 
   const promotions = baseData?.promotions || [];
-  const services   = baseData?.services   || [];
   const loyaltySettings = baseData?.loyaltySettings || { appointments_threshold: 10, is_enabled: true };
 
   if (baseLoading) {
@@ -128,7 +124,7 @@ export default function PromotionsPage() {
                 <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col p-2 space-y-2">
                   {promotions.map((promo) => {
                     const isSelected = selectedPromo?.id === promo.id;
-                    const discountText = promo.discount_type === 'percentage' ? `${promo.discount_value}%` : promo.discount_type === 'free' ? 'GRATIS' : `$${new Intl.NumberFormat('de-DE').format(promo.discount_value)}`;
+                    const discountText = promo.discount_type === 'percentage' ? `${promo.discount_value}%` : promo.discount_type === 'free' ? 'GRATIS' : `{formatPrice(promo.discount_value)}`;
                     return (
                       <div 
                         key={promo.id} 
@@ -217,7 +213,7 @@ export default function PromotionsPage() {
               </div>
               <h4 className="text-lg font-bold text-white uppercase tracking-wider mb-2">Editor de Ofertas</h4>
               <p className="text-xs text-white/40 font-medium uppercase tracking-wider max-w-xs leading-relaxed">
-                Selecciona una promoción de la lista para editarla o haz clic en "Nueva Oferta" para crear un descuento.
+                Selecciona una promoción de la lista para editarla o haz clic en &quot;Nueva Oferta&quot; para crear un descuento.
               </p>
             </div>
           )}

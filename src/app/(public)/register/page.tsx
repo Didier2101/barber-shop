@@ -4,6 +4,9 @@ import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { User, Phone, Lock, Scissors, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 
 function toFriendlyRegisterError(message: string) {
   const normalized = message.toLowerCase();
@@ -15,47 +18,53 @@ function toFriendlyRegisterError(message: string) {
   return 'No se pudo completar el registro. Verifica los datos e intenta de nuevo.';
 }
 
+const registerSchema = z.object({
+  name: z.string().min(3, 'Ingresa tu nombre completo.'),
+  phone: z.string()
+    .regex(/^\d+$/, 'El número de celular solo debe contener números.')
+    .length(10, 'El número debe tener exactamente 10 dígitos.')
+    .startsWith('3', 'El número de celular debe empezar por 3.'),
+  password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres.'),
+  acceptedTerms: z.boolean().refine(val => val === true, 'Debes aceptar el tratamiento de datos personales para continuar.'),
+});
+
+type RegisterForm = z.infer<typeof registerSchema>;
+
 export default function Register() {
   const router = useRouter();
-  const [form, setForm] = useState({ name: '', phone: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
-  const [acceptedTerms, setAcceptedTerms] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [globalError, setGlobalError] = useState('');
   
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<RegisterForm>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      name: '',
+      phone: '',
+      password: '',
+      acceptedTerms: false
+    }
+  });
+  
+  const onSubmit = async (data: RegisterForm) => {
+    setGlobalError('');
     
-    if (!acceptedTerms) return setError('Debes aceptar el tratamiento de datos personales para continuar.');
+    const cleanName = data.name.trim();
+    const cleanPhone = data.phone;
     
-    const cleanName = form.name.trim();
-    const cleanPhone = form.phone.replace(/\D/g, ''); // Solo dígitos
-    
-    if (cleanName.length < 3) return setError('Ingresa tu nombre completo.');
-    if (cleanPhone.length < 10) return setError('Ingresa un número de celular válido (mínimo 10 dígitos).');
-    if (form.password.length < 6) return setError('La contraseña debe tener al menos 6 caracteres.');
-
-    setError('');
-    setLoading(true);
-    
-    // Generamos el correo interno para Supabase (Invisible para el cliente)
     const internalEmail = `${cleanPhone}@barbershop.local`;
     
-    // 1. Registro en Auth
-    const { data, error: authError } = await supabase.auth.signUp({
+    const { data: authData, error: authError } = await supabase.auth.signUp({
       email: internalEmail,
-      password: form.password,
+      password: data.password,
     });
 
     if (authError) {
-      setLoading(false);
-      return setError(toFriendlyRegisterError(authError.message));
+      return setGlobalError(toFriendlyRegisterError(authError.message));
     }
 
-    if (data.user) {
-      // 2. Crear Perfil con políticas aceptadas (CRÍTICO)
+    if (authData.user) {
       const { error: profileError } = await supabase.from('profiles').insert({
-        id: data.user.id,
+        id: authData.user.id,
         role: 'client',
         name: cleanName,
         phone: cleanPhone,
@@ -66,13 +75,11 @@ export default function Register() {
 
       if (profileError) {
         console.error('Error al crear perfil:', profileError);
-        setLoading(false);
-        return setError('Cuenta creada, pero hubo un error en el perfil. Intenta entrar con tu contraseña.');
+        return setGlobalError('Cuenta creada, pero hubo un error en el perfil. Intenta entrar con tu contraseña.');
       }
       
-      // 3. Sesión y Redirección
       document.cookie = "barbershop-auth=true; path=/; max-age=2592000; SameSite=Lax";
-      router.push(`/dashboard/client/${data.user.id}`);
+      router.push(`/dashboard/client/${authData.user.id}`);
     }
   };
 
@@ -111,25 +118,24 @@ export default function Register() {
                    <p className="text-[10px] text-white/40 uppercase tracking-widest mt-2">Solo necesitas tu celular</p>
                 </div>
 
-                {error && (
+                {globalError && (
                   <div className="bg-red-500/10 border border-red-500/30 text-red-200 px-5 py-4 rounded-2xl mb-6 text-xs font-bold animate-in fade-in slide-in-from-top-2">
-                    {error}
+                    {globalError}
                   </div>
                 )}
 
-                <form onSubmit={handleRegister} className="space-y-5">
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-black uppercase tracking-[0.2em] text-[#f59e0b] ml-1">Nombre Completo</label>
                     <div className="relative group">
                       <User size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 group-focus-within:text-[#f59e0b] transition-colors" />
                       <input
-                        className="w-full h-13 bg-white/5 border border-white/10 rounded-2xl pl-12 pr-4 text-white text-sm focus:outline-none focus:border-[#f59e0b] transition-all font-medium"
+                        {...register('name')}
+                        className={`w-full h-13 bg-white/5 border ${errors.name ? 'border-red-500/50' : 'border-white/10'} rounded-2xl pl-12 pr-4 text-white text-sm focus:outline-none focus:border-[#f59e0b] transition-all font-medium`}
                         placeholder="Juan Pérez"
-                        value={form.name}
-                        onChange={e => setForm({ ...form, name: e.target.value })}
-                        required
                       />
                     </div>
+                    {errors.name && <p className="text-red-400 text-xs mt-1 ml-1 font-medium">{errors.name.message}</p>}
                   </div>
 
                   <div className="space-y-1.5">
@@ -138,13 +144,16 @@ export default function Register() {
                       <Phone size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 group-focus-within:text-[#f59e0b] transition-colors" />
                       <input
                         type="tel"
-                        className="w-full h-13 bg-white/5 border border-white/10 rounded-2xl pl-12 pr-4 text-white text-sm focus:outline-none focus:border-[#f59e0b] transition-all font-medium"
+                        {...register('phone', {
+                          onChange: (e) => {
+                            e.target.value = e.target.value.replace(/\D/g, '');
+                          }
+                        })}
+                        className={`w-full h-13 bg-white/5 border ${errors.phone ? 'border-red-500/50' : 'border-white/10'} rounded-2xl pl-12 pr-4 text-white text-sm focus:outline-none focus:border-[#f59e0b] transition-all font-medium`}
                         placeholder="300 123 4567"
-                        value={form.phone}
-                        onChange={e => setForm({ ...form, phone: e.target.value })}
-                        required
                       />
                     </div>
+                    {errors.phone && <p className="text-red-400 text-xs mt-1 ml-1 font-medium">{errors.phone.message}</p>}
                   </div>
 
                   <div className="space-y-1.5">
@@ -153,11 +162,9 @@ export default function Register() {
                       <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 group-focus-within:text-[#f59e0b] transition-colors" />
                       <input
                         type={showPassword ? 'text' : 'password'}
-                        className="w-full h-13 bg-white/5 border border-white/10 rounded-2xl pl-12 pr-12 text-white text-sm focus:outline-none focus:border-[#f59e0b] transition-all font-medium"
+                        {...register('password')}
+                        className={`w-full h-13 bg-white/5 border ${errors.password ? 'border-red-500/50' : 'border-white/10'} rounded-2xl pl-12 pr-12 text-white text-sm focus:outline-none focus:border-[#f59e0b] transition-all font-medium`}
                         placeholder="Mínimo 6 caracteres"
-                        value={form.password}
-                        onChange={e => setForm({ ...form, password: e.target.value })}
-                        required
                       />
                       <button
                         type="button"
@@ -167,31 +174,34 @@ export default function Register() {
                         {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
                     </div>
+                    {errors.password && <p className="text-red-400 text-xs mt-1 ml-1 font-medium">{errors.password.message}</p>}
                   </div>
 
-                  <div className="flex items-start gap-3 bg-white/5 p-4 rounded-2xl border border-white/5">
-                    <input
-                      type="checkbox"
-                      id="terms"
-                      className="mt-1 w-4 h-4 rounded border-white/20 text-[#f59e0b] focus:ring-[#f59e0b] bg-transparent cursor-pointer"
-                      checked={acceptedTerms}
-                      onChange={e => setAcceptedTerms(e.target.checked)}
-                    />
-                    <label htmlFor="terms" className="text-[10px] text-white/50 leading-relaxed cursor-pointer select-none">
-                      Autorizo el tratamiento de mis datos personales según la{' '}
-                      <Link href="/privacy" className="text-[#f59e0b] hover:underline font-bold">
-                        Política de Privacidad
-                      </Link>{' '}
-                      y acepto los Términos de Servicio.
-                    </label>
+                  <div className="space-y-1.5">
+                    <div className="flex items-start gap-3 bg-white/5 p-4 rounded-2xl border border-white/5">
+                      <input
+                        type="checkbox"
+                        id="terms"
+                        {...register('acceptedTerms')}
+                        className="mt-1 w-4 h-4 rounded border-white/20 text-[#f59e0b] focus:ring-[#f59e0b] bg-transparent cursor-pointer"
+                      />
+                      <label htmlFor="terms" className="text-[10px] text-white/50 leading-relaxed cursor-pointer select-none">
+                        Autorizo el tratamiento de mis datos personales según la{' '}
+                        <Link href="/privacy" className="text-[#f59e0b] hover:underline font-bold">
+                          Política de Privacidad
+                        </Link>{' '}
+                        y acepto los Términos de Servicio.
+                      </label>
+                    </div>
+                    {errors.acceptedTerms && <p className="text-red-400 text-xs mt-1 ml-1 font-medium">{errors.acceptedTerms.message}</p>}
                   </div>
 
                   <button
                     type="submit"
-                    disabled={loading}
+                    disabled={isSubmitting}
                     className="w-full bg-[#f59e0b] hover:bg-white text-black h-14 rounded-2xl font-black uppercase tracking-widest text-[11px] transition-all flex items-center justify-center gap-3 active:scale-[0.98] disabled:opacity-50 shadow-xl shadow-amber-500/10"
                   >
-                    {loading ? (
+                    {isSubmitting ? (
                       <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
                     ) : (
                       <>
