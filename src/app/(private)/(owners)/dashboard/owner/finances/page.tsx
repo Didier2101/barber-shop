@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { 
   Wallet,
@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatPrice } from '@/lib/format';
+import { useEffect } from 'react';
 
 export default function FinancesPage() {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
@@ -98,36 +99,55 @@ export default function FinancesPage() {
 
       let grossSales = 0;
       let barberCuts = 0;
-      let unsettledCount = 0;
+      let unsettled = 0;
 
-      appointments?.forEach((app: { price?: number | string; settlement_id?: string; barber?: { commission_percentage?: number | string }[] | { commission_percentage?: number | string } | null }) => {
+      appointments?.forEach((app) => {
         const price = Number(app.price || 0);
-        grossSales += price;
         const barberData = Array.isArray(app.barber) ? app.barber[0] : app.barber;
         const comm = barberData?.commission_percentage != null ? Number(barberData.commission_percentage) : 50;
-        barberCuts += price * (comm / 100);
-        if (!app.settlement_id) unsettledCount++;
+        
+        const barberShare = price * (comm / 100);
+        grossSales += price;
+        barberCuts += barberShare;
+        
+        if (!app.settlement_id) unsettled++;
       });
 
       const shopEarnings = grossSales - barberCuts;
-      const totalExpenses = expenses?.reduce((acc: number, exp: { amount?: number | string }) => acc + Number(exp.amount || 0), 0) || 0;
+      const totalExpenses = expenses?.reduce((sum, e) => sum + Number(e.amount), 0) || 0;
       const netProfit = shopEarnings - totalExpenses;
 
       setStats({
-        grossSales, barberCuts, shopEarnings, totalExpenses, netProfit, unsettledCount
+        grossSales,
+        barberCuts,
+        shopEarnings,
+        totalExpenses,
+        netProfit,
+        unsettledCount: unsettled
       });
 
     } catch (error) {
-      console.error('Error fetching finance data:', error);
+      console.error(error);
+      toast.error('Error al cargar datos financieros');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleCloseMonth = async () => {
+    if (stats.unsettledCount > 0) {
+      toast.error(`Existen ${stats.unsettledCount} cortes sin liquidar. Liquídalos antes de cerrar el mes.`);
+      return;
+    }
+    
+    if (!window.confirm(`¿Estás seguro de cerrar el mes de ${months[selectedMonth]} ${selectedYear}? Esta acción guardará el balance y es irreversible.`)) {
+      return;
+    }
+
     setIsClosing(true);
+    const monthStr = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
+
     try {
-      const monthStr = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
       const { error } = await supabase.from('shop_monthly_balances').insert({
         month: monthStr,
         total_sales: stats.grossSales,
@@ -135,133 +155,138 @@ export default function FinancesPage() {
         shop_earnings: stats.shopEarnings,
         total_expenses: stats.totalExpenses,
         net_profit: stats.netProfit,
-        status: 'closed'
+        closed_at: new Date().toISOString()
       });
 
-      if (error) {
-        console.error('Error supabase:', error);
-        throw error;
-      }
-      
-      toast.success(`El mes de ${months[selectedMonth]} ha sido cerrado con éxito.`);
+      if (error) throw error;
+      toast.success('Mes cerrado exitosamente');
       fetchMonthData();
-    } catch (error: unknown) {
-      console.error('Error closing month:', error instanceof Error ? error.message : error);
-      toast.error('Ocurrió un error al intentar cerrar el mes.');
+    } catch (e: unknown) {
+      toast.error('Error al cerrar mes: ' + (e instanceof Error ? e.message : String(e)));
     } finally {
       setIsClosing(false);
     }
   };
 
-  const today = new Date();
-  const endOfSelectedMonth = new Date(selectedYear, selectedMonth + 1, 0, 23, 59, 59);
-  const canCloseByDate = today >= endOfSelectedMonth;
-  const hasUnsettled = stats.unsettledCount > 0;
-  const canClose = !closedBalance && canCloseByDate && !hasUnsettled;
-
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-4xl mx-auto pb-32">
-      <div className="flex items-center gap-5 mb-8">
-        <div className="p-4 bg-surface border border-white/5 rounded-2xl shadow-xl text-brand">
-          <Wallet size={28} />
-        </div>
-        <div>
-          <p className="text-brand text-[10px] font-bold uppercase tracking-[0.2em] mb-1">Administración Contable</p>
-          <h2 className="text-3xl font-bold tracking-tight text-white uppercase">Cierre de Mes</h2>
-        </div>
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto pb-32 font-sans">
+      
+      {/* HEADER Y FILTROS ERP */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-erp-bg border border-erp-border p-6 rounded-2xl shadow-sm">
+         <div className="flex items-center gap-5">
+            <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-xl text-emerald-600 shadow-sm shrink-0">
+               <Wallet size={24} />
+            </div>
+            <div>
+               <h2 className="text-2xl font-black text-erp-text tracking-tight uppercase">Balance Financiero</h2>
+               <p className="text-sm font-medium text-erp-text-muted mt-0.5">Control de ingresos, gastos y cierres de mes</p>
+            </div>
+         </div>
+
+         <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 bg-erp-surface border border-erp-border rounded-xl px-4 py-2 shadow-sm">
+               <Calendar size={16} className="text-erp-text-muted" />
+               <select 
+                  className="bg-transparent text-sm font-bold text-erp-text outline-none cursor-pointer uppercase tracking-widest"
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(Number(e.target.value))}
+               >
+                  {months.map((m, i) => <option key={m} value={i}>{m}</option>)}
+               </select>
+               <select
+                  className="bg-transparent text-sm font-bold text-erp-text outline-none cursor-pointer"
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(Number(e.target.value))}
+               >
+                  {years.map(y => <option key={y} value={y}>{y}</option>)}
+               </select>
+            </div>
+         </div>
       </div>
 
-      <div className="space-y-6">
-        <div className="flex items-center justify-between border-b border-white/10 pb-4">
-          <h3 className="text-lg font-bold uppercase tracking-widest text-white flex items-center gap-2">
-            <Calendar size={18} className="text-brand" /> Cierre Contable Oficial
-          </h3>
-          <div className="flex items-center gap-2 bg-surface border border-white/5 p-1 rounded-xl">
-            <select 
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(Number(e.target.value))}
-              className="bg-transparent text-sm text-white outline-none cursor-pointer uppercase tracking-wider font-medium px-2 py-1"
-            >
-              {months.map((m, i) => <option key={i} value={i} className="bg-bg-base">{m}</option>)}
-            </select>
-            <select 
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(Number(e.target.value))}
-              className="bg-transparent text-sm text-brand outline-none cursor-pointer font-bold px-2 py-1"
-            >
-              {years.map(y => <option key={y} value={y} className="bg-bg-base">{y}</option>)}
-            </select>
-          </div>
+      {isLoading ? (
+        <div className="flex justify-center items-center py-20">
+          <div className="w-8 h-8 border-4 border-erp-primary/20 border-t-erp-primary rounded-full animate-spin"></div>
         </div>
-
-        {isLoading ? (
-          <div className="flex items-center justify-center min-h-[300px]">
-            <div className="w-8 h-8 border-4 border-brand/20 border-t-brand rounded-full animate-spin"></div>
-          </div>
-        ) : (
-          <div className="bg-surface border border-white/5 rounded-3xl p-6 shadow-xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-brand/5 rounded-full blur-3xl pointer-events-none"></div>
-            
-            {closedBalance ? (
-              <div className="bg-brand/10 border border-brand/20 text-brand p-4 rounded-xl flex items-center gap-3 mb-6">
-                <CheckCircle2 size={24} />
-                <div>
-                  <h4 className="font-bold text-sm uppercase tracking-wider">Mes Cerrado</h4>
-                  <p className="text-xs opacity-80 mt-1">Registros congelados permanentemente.</p>
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-3 mb-6">
-                {!canCloseByDate && (
-                  <div className="bg-white/5 border border-white/10 text-white/70 p-3 rounded-xl flex items-center gap-3">
-                    <AlertCircle size={16} className="text-brand flex-shrink-0" />
-                    <p className="text-xs">Solo se puede cerrar el último día del mes o después.</p>
-                  </div>
-                )}
-                {hasUnsettled && (
-                  <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-xl flex items-center gap-3">
-                    <AlertCircle size={16} className="flex-shrink-0" />
-                    <p className="text-xs">Hay {stats.unsettledCount} citas sin liquidar a barberos. Requerido para cerrar.</p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div className="space-y-4">
-              <div className="flex justify-between items-center p-3 bg-white/5 rounded-xl">
-                <span className="text-xs text-white/50 uppercase tracking-widest flex items-center gap-2"><DollarSign size={14}/> Ingresos Brutos</span>
-                <span className="font-black text-lg">{formatPrice(stats.grossSales)}</span>
-              </div>
-              <div className="flex justify-between items-center p-3 bg-red-500/5 rounded-xl border border-red-500/10">
-                <span className="text-xs text-red-500/70 uppercase tracking-widest flex items-center gap-2"><Scissors size={14}/> Comisiones (Barberos)</span>
-                <span className="font-black text-lg text-red-500">-{formatPrice(stats.barberCuts)}</span>
-              </div>
-              <div className="flex justify-between items-center p-3 bg-orange-500/5 rounded-xl border border-orange-500/10">
-                <span className="text-xs text-orange-500/70 uppercase tracking-widest flex items-center gap-2"><TrendingDown size={14}/> Gastos Operativos</span>
-                <span className="font-black text-lg text-orange-500">-{formatPrice(stats.totalExpenses)}</span>
-              </div>
-              <div className={`flex justify-between items-center p-4 rounded-xl border mt-6 shadow-lg ${stats.netProfit >= 0 ? 'bg-green-500/10 border-green-500/20' : 'bg-red-500/10 border-red-500/20'}`}>
-                <span className={`text-xs uppercase tracking-widest font-bold flex items-center gap-2 ${stats.netProfit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                  <TrendingUp size={14}/> Utilidad Neta
-                </span>
-                <span className={`font-black text-3xl ${stats.netProfit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                  {formatPrice(stats.netProfit)}
-                </span>
+      ) : (
+        <>
+          {closedBalance && (
+            <div className="bg-emerald-50 border border-emerald-200 p-6 rounded-2xl flex items-start gap-4 shadow-sm mb-4">
+              <CheckCircle2 className="text-emerald-600 shrink-0 mt-1" size={24} />
+              <div>
+                <h4 className="text-emerald-800 font-black uppercase tracking-tight text-lg">Balance Cerrado</h4>
+                <p className="text-emerald-700/80 text-sm font-medium mt-1">Este mes ya fue cerrado y los datos son de solo lectura. Ningún corte o gasto nuevo afectará este balance histórico.</p>
               </div>
             </div>
+          )}
 
-            {!closedBalance && (
+          {/* TABLEROS KPI */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="bg-erp-surface border border-erp-border p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+               <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><Scissors size={18} /></div>
+                  <h3 className="text-[10px] font-black uppercase tracking-widest text-erp-text-muted">Ventas Brutas</h3>
+               </div>
+               <p className="text-3xl font-black text-erp-text tracking-tight">{formatPrice(stats.grossSales)}</p>
+               <p className="text-xs font-bold text-erp-text-muted mt-2 uppercase tracking-widest">Total facturado en cortes</p>
+            </div>
+
+            <div className="bg-erp-surface border border-erp-border p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+               <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-purple-50 text-purple-600 rounded-lg"><DollarSign size={18} /></div>
+                  <h3 className="text-[10px] font-black uppercase tracking-widest text-erp-text-muted">Pago a Barberos</h3>
+               </div>
+               <p className="text-3xl font-black text-purple-600 tracking-tight">-{formatPrice(stats.barberCuts)}</p>
+               <p className="text-xs font-bold text-erp-text-muted mt-2 uppercase tracking-widest">Comisiones deducidas</p>
+            </div>
+
+            <div className="bg-erp-surface border border-erp-border p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+               <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-red-50 text-red-600 rounded-lg"><TrendingDown size={18} /></div>
+                  <h3 className="text-[10px] font-black uppercase tracking-widest text-erp-text-muted">Gastos Local</h3>
+               </div>
+               <p className="text-3xl font-black text-red-600 tracking-tight">-{formatPrice(stats.totalExpenses)}</p>
+               <p className="text-xs font-bold text-erp-text-muted mt-2 uppercase tracking-widest">Egresos operativos</p>
+            </div>
+
+            <div className="bg-erp-bg border-2 border-erp-primary/20 p-6 rounded-2xl shadow-sm relative overflow-hidden">
+               <div className="relative z-10">
+                  <div className="flex items-center gap-3 mb-4">
+                     <div className="p-2 bg-erp-primary text-white rounded-lg shadow-sm"><TrendingUp size={18} /></div>
+                     <h3 className="text-[10px] font-black uppercase tracking-widest text-erp-text-muted">Utilidad Neta</h3>
+                  </div>
+                  <p className="text-4xl font-black text-erp-text tracking-tight">{formatPrice(stats.netProfit)}</p>
+                  <p className="text-xs font-bold text-erp-text-muted mt-2 uppercase tracking-widest">Ganancia real del dueño</p>
+               </div>
+               <TrendingUp size={150} className="absolute -bottom-10 -right-10 opacity-5 text-erp-primary pointer-events-none" />
+            </div>
+          </div>
+
+          {/* ACCIÓN DE CIERRE */}
+          {!closedBalance && (
+            <div className="mt-8 bg-erp-surface border border-erp-border rounded-2xl p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
+              <div>
+                <h3 className="text-xl font-black text-erp-text tracking-tight uppercase">Cierre de Mes</h3>
+                <p className="text-sm font-medium text-erp-text-muted mt-1 max-w-xl">
+                  Al cerrar el mes, los totales se guardan como un registro histórico inmutable. Asegúrate de haber liquidado a todos los barberos y registrado todos los gastos.
+                </p>
+                {stats.unsettledCount > 0 && (
+                  <div className="flex items-center gap-2 text-amber-600 bg-amber-50 px-3 py-1.5 rounded-lg text-xs font-bold mt-4 w-fit border border-amber-200 uppercase tracking-widest">
+                    <AlertCircle size={14} /> Faltan {stats.unsettledCount} cortes por liquidar a barberos
+                  </div>
+                )}
+              </div>
               <button
                 onClick={handleCloseMonth}
-                disabled={!canClose || isClosing}
-                className="w-full mt-6 bg-brand text-black px-6 py-4 rounded-xl font-bold uppercase tracking-widest text-xs shadow-xl shadow-brand/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2"
+                disabled={isClosing || stats.unsettledCount > 0}
+                className="w-full md:w-auto px-8 py-4 bg-erp-text text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-black transition-all shadow-xl disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
               >
-                {isClosing ? 'CERRANDO...' : 'EJECUTAR CIERRE DE MES'}
+                {isClosing ? 'CERRANDO...' : 'CERRAR BALANCE MENSUAL'}
               </button>
-            )}
-          </div>
-        )}
-      </div>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

@@ -44,15 +44,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Permisos insuficientes' }, { status: 403 });
     }
 
-    const { userId } = await request.json();
+    const { userId, newPassword } = await request.json();
 
-    if (!userId) {
-      return NextResponse.json({ error: 'ID de usuario requerido' }, { status: 400 });
+    if (!userId || !newPassword) {
+      return NextResponse.json({ error: 'ID de usuario y nueva contraseña requeridos' }, { status: 400 });
     }
 
-    // Actualizar la contraseña del usuario objetivo a 123456
+    if (newPassword.length < 6) {
+      return NextResponse.json({ error: 'La contraseña debe tener al menos 6 caracteres' }, { status: 400 });
+    }
+
+    // Actualizar la contraseña del usuario objetivo a la proporcionada
     const { error: resetError } = await adminClient.auth.admin.updateUserById(userId, {
-      password: '123456'
+      password: newPassword
     });
 
     if (resetError) {

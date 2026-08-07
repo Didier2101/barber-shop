@@ -8,10 +8,11 @@ import {
   X,
   User,
   Mail,
-  Eye,
-  EyeOff,
   Activity,
-  Phone
+  Phone,
+  ChevronRight,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
@@ -19,6 +20,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { formatPrice } from '@/lib/format';
 import Image from 'next/image';
+import { motion, AnimatePresence } from 'framer-motion';
+import { supabase } from '@/lib/supabase';
+import { toast } from 'sonner';
+import Swal from 'sweetalert2';
+import { Profile, Appointment } from '@/types';
 
 const barberSchema = z.object({
   name: z.string().min(3, 'El nombre debe tener al menos 3 caracteres'),
@@ -29,23 +35,22 @@ const barberSchema = z.object({
   commission: z.string().regex(/^\d+$/, 'Debe ser un número')
 });
 type BarberFormValues = z.infer<typeof barberSchema>;
-import { supabase } from '@/lib/supabase';
-import { toast } from 'sonner';
-import Swal from 'sweetalert2';
-import { Profile, Appointment } from '@/types';
 
 export default function TeamPage() {
   const { data: baseData, isLoading: baseLoading, refetch } = useOwnerBaseData();
   const { data: todayApts = [] } = useTodayAppointments();
   const { createBarber, createSettlement, updateBarberServices } = useOwnerMutations();
+  
   const [selectedBarber, setSelectedBarber] = useState<(Profile & { todayIncome: number; todayBarberCut: number; todayOwnerCut: number; todayAptsCount: number }) | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   
   const [editingServices, setEditingServices] = useState(false);
   const [barberServices, setBarberServices] = useState<string[]>([]);
+  const [newBarberServices, setNewBarberServices] = useState<string[]>([]);
+  const [serviceError, setServiceError] = useState(false);
 
-  // Sincronizar servicios del barbero seleccionado
   useMemo(() => {
     if (selectedBarber && !editingServices) {
       setBarberServices(selectedBarber.barber_services?.map(s => s.service_id) || []);
@@ -63,6 +68,12 @@ export default function TeamPage() {
   });
 
   const handleCreateBarber = (data: BarberFormValues) => {
+    if (newBarberServices.length === 0) {
+      setServiceError(true);
+      return;
+    }
+    setServiceError(false);
+    
     createBarber.mutate({
       name: data.name,
       email: data.email,
@@ -71,9 +82,23 @@ export default function TeamPage() {
       password: data.password,
       commission_percentage: Number(data.commission)
     }, {
-      onSuccess: () => {
-        setIsAdding(false);
-        form.reset();
+      onSuccess: (res: Profile ) => {
+        if (newBarberServices.length > 0 && res?.id) {
+          updateBarberServices.mutate({ barber_id: res.id, service_ids: newBarberServices }, {
+            onSuccess: () => {
+              setIsDrawerOpen(false);
+              setIsAdding(false);
+              form.reset();
+              setNewBarberServices([]);
+              refetch();
+            }
+          });
+        } else {
+          setIsDrawerOpen(false);
+          setIsAdding(false);
+          form.reset();
+          setNewBarberServices([]);
+        }
       }
     });
   };
@@ -87,7 +112,6 @@ export default function TeamPage() {
       const commission = b.commission_percentage || 50;
       const todayBarberCut = (todayIncome * commission) / 100;
       const todayOwnerCut = todayIncome - todayBarberCut;
-
       const todayAptsCount = bApts.length;
 
       return {
@@ -100,429 +124,455 @@ export default function TeamPage() {
     });
   }, [baseData?.barbers, todayApts]);
 
-  const toggleBarberStatus = async (id: string, currentStatus: boolean) => {
-    const { error } = await supabase.from('profiles').update({ is_active: !currentStatus }).eq('id', id);
-    if (error) toast.error('Error al actualizar estado');
-    else {
-      toast.success('Estado actualizado');
-      refetch();
+  const toggleBarberStatus = async (id: string, currentStatus: boolean, name: string) => {
+    const action = currentStatus ? 'desactivar' : 'activar';
+    const result = await Swal.fire({
+      title: `¿Confirmas que deseas ${action} a ${name}?`,
+      text: currentStatus ? 'El profesional no podrá ingresar al sistema hasta que lo vuelvas a activar.' : 'El profesional recuperará su acceso al sistema.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: 'var(--color-erp-primary)',
+      cancelButtonColor: '#ef4444',
+      confirmButtonText: 'Sí, confirmar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (result.isConfirmed) {
+      const { error } = await supabase.from('profiles').update({ is_active: !currentStatus }).eq('id', id);
+      if (error) toast.error('Error al actualizar estado');
+      else {
+        toast.success(`Profesional ${action}do exitosamente`);
+        refetch();
+      }
     }
   };
 
   if (baseLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="w-8 h-8 border-4 border-brand/20 border-t-[#f59e0b] rounded-full animate-spin"></div>
+        <div className="w-8 h-8 border-4 border-erp-primary/20 border-t-erp-primary rounded-full animate-spin"></div>
       </div>
     );
   }
 
+  const openAddDrawer = () => {
+    setSelectedBarber(null);
+    setIsAdding(true);
+    form.reset();
+    setNewBarberServices([]);
+    setServiceError(false);
+    setIsDrawerOpen(true);
+  };
+
+  const openEditDrawer = (barber: Profile & { todayIncome: number; todayBarberCut: number; todayOwnerCut: number; todayAptsCount: number }) => {
+    setIsAdding(false);
+    setSelectedBarber(barber);
+    setIsDrawerOpen(true);
+  };
+
   return (
-    <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-8xl mx-auto pb-32">
-
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* LADO IZQUIERDO: Lista de Barberos */}
-        <div className="lg:col-span-4 space-y-6">
-          <div className="flex items-center justify-between px-2">
-            <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/40 flex items-center gap-2">
-              <Users size={12} className="text-brand" /> Nómina de Artesanos
-            </h3>
-            <button
-              onClick={() => {
-                setSelectedBarber(null);
-                setIsAdding(true);
-                form.reset();
-              }}
-              className="flex items-center gap-2 bg-brand/10 text-brand px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider hover:bg-brand hover:text-black transition-all"
-            >
-              <Plus size={12} />
-              Nuevo Miembro
-            </button>
-          </div>
-
-          <div className="bg-black border border-white/5 rounded-2xl overflow-hidden shadow-xl flex flex-col h-[70vh]">
-            {barberPerformance.length === 0 ? (
-              <div className="flex-1 p-16 flex flex-col items-center justify-center text-center opacity-40">
-                <Users size={32} className="text-white/20 mb-4" />
-                <p className="text-xs font-medium text-white uppercase tracking-wider">No hay miembros registrados</p>
-              </div>
-            ) : (
-              <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col p-2 space-y-2">
-                {barberPerformance.map((b) => {
-                  const isSelected = selectedBarber?.id === b.id && !isAdding;
-                  return (
-                    <div
-                      key={b.id}
-                      onClick={() => {
-                        setIsAdding(false);
-                        setSelectedBarber(b);
-                      }}
-                      className={`w-full p-4 rounded-xl border flex flex-col transition-all cursor-pointer group ${isSelected ? 'bg-brand/10 border-brand/30' : 'bg-bg-base border-white/5 hover:border-white/10'}`}
-                    >
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-4">
-                          <div className={`w-12 h-12 rounded-xl overflow-hidden border shrink-0 flex items-center justify-center relative ${isSelected ? 'border-brand/30' : 'border-white/10'}`}>
-                            {b.avatar_url ? (
-                              <Image src={b.avatar_url} alt={b.name} width={48} height={48} className="w-full h-full object-cover" />
-                            ) : (
-                              <User size={20} className={isSelected ? 'text-brand' : 'text-white/20'} />
-                            )}
-                            {!b.is_active && <div className="absolute inset-0 bg-red-500/80 flex items-center justify-center backdrop-blur-[1px]"><p className="text-[8px] font-bold text-white uppercase tracking-widest">Off</p></div>}
-                          </div>
-                          <div>
-                            <h4 className={`text-sm font-bold uppercase tracking-tight mb-0.5 ${isSelected ? 'text-brand' : 'text-white'}`}>
-                              {b.name}
-                            </h4>
-                            <div className="flex items-center gap-1.5 text-[9px] font-medium text-white/50 uppercase tracking-wider">
-                              <span className="bg-white/5 px-2 py-0.5 rounded border border-white/10">{b.commission_percentage}% COMISIÓN</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2 shrink-0">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleBarberStatus(b.id, !!b.is_active);
-                            }}
-                            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider transition-all border ${b.is_active
-                                ? 'text-red-500 border-red-500/20 bg-red-500/5 hover:bg-red-500/10'
-                                : 'text-emerald-500 border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10'
-                              }`}
-                          >
-                            {b.is_active ? <><X size={12} /> Desactivar</> : <><Check size={12} /> Activar</>}
-                          </button>
-                        </div>
-                      </div>
-
-                      </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+    <div className="space-y-6 max-w-7xl mx-auto pb-32 font-sans animate-in fade-in slide-in-from-bottom-4 duration-500">
+      
+      {/* HEADER ERP */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-erp-bg border border-erp-border p-6 rounded-2xl shadow-sm">
+        <div>
+          <h2 className="text-2xl font-black text-erp-text tracking-tight flex items-center gap-3">
+            <Users size={24} className="text-erp-primary" />
+            Gestión de Personal
+          </h2>
+          <p className="text-sm font-medium text-erp-text-muted mt-1">Directorio de colaboradores y liquidaciones</p>
         </div>
+        <button
+          onClick={openAddDrawer}
+          className="bg-erp-primary text-white hover:bg-erp-primary/90 px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-md active:scale-95 flex items-center gap-2"
+        >
+          <Plus size={18} />
+          Nuevo Profesional
+        </button>
+      </div>
 
-        {/* LADO DERECHO: Detalle o Formulario */}
-        <div className="lg:col-span-8 space-y-6">
-          <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/40 px-2 flex items-center gap-2">
-            <Edit size={12} className="text-brand" /> {isAdding ? 'Nuevo Barbero' : selectedBarber ? 'Perfil de Artesano' : 'Gestión'}
-          </h3>
-
-          <div className="bg-surface border border-white/5 rounded-2xl p-8 shadow-xl relative min-h-[65vh]">
-
-            {isAdding ? (
-              <div className="animate-in fade-in slide-in-from-right-4 duration-500">
-                <div className="flex items-center justify-between border-b border-white/5 pb-6 mb-8">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-brand/10 border border-brand/20 rounded-xl text-brand">
-                      <Plus size={20} />
-                    </div>
-                    <div>
-                      <h4 className="text-lg font-bold text-white uppercase tracking-tight">Crear Perfil</h4>
-                      <p className="text-[10px] font-medium text-brand uppercase tracking-widest mt-1">Añadir miembro al equipo</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setIsAdding(false)}
-                    className="text-[10px] font-bold uppercase tracking-wider text-white/40 hover:text-white transition-all bg-white/5 px-3 py-1.5 rounded-lg"
+      {/* DATA GRID (TABLA) */}
+      <div className="bg-erp-surface border border-erp-border rounded-2xl shadow-sm overflow-hidden">
+        <div className="overflow-x-auto custom-scrollbar">
+          {barberPerformance.length === 0 ? (
+            <div className="py-20 flex flex-col items-center justify-center text-center opacity-60">
+              <Users size={48} className="text-erp-text-muted mb-4" />
+              <p className="text-sm font-bold text-erp-text uppercase tracking-widest">Directorio Vacío</p>
+            </div>
+          ) : (
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-erp-bg border-b border-erp-border">
+                  <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-erp-text-muted whitespace-nowrap">Profesional</th>
+                  <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-erp-text-muted whitespace-nowrap">Contacto</th>
+                  <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-erp-text-muted text-center whitespace-nowrap">Comisión</th>
+                  <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-erp-text-muted text-center whitespace-nowrap">Estado</th>
+                  <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-erp-text-muted text-right whitespace-nowrap">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-erp-border">
+                {barberPerformance.map((b) => (
+                  <tr
+                    key={b.id}
+                    onClick={() => openEditDrawer(b)}
+                    className="cursor-pointer group bg-erp-bg"
                   >
-                    Cancelar
-                  </button>
-                </div>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-lg overflow-hidden border border-erp-border bg-erp-surface flex items-center justify-center shrink-0">
+                          {b.avatar_url ? (
+                            <Image src={b.avatar_url} alt={b.name} width={40} height={40} className="w-full h-full object-cover" />
+                          ) : (
+                            <User size={18} className="text-erp-text-muted" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-erp-text capitalize">{b.name}</p>
+                          <p className="text-xs font-medium text-erp-text-muted">ID: {b.id.substring(0, 8)}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2 text-xs font-medium text-erp-text">
+                          <Mail size={12} className="text-erp-text-muted" /> {b.email || 'N/A'}
+                        </div>
+                        <div className="flex items-center gap-2 text-xs font-medium text-erp-text">
+                          <Phone size={12} className="text-erp-text-muted" /> {b.phone || 'N/A'}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-center whitespace-nowrap">
+                      <span className="inline-block bg-erp-surface border border-erp-border px-3 py-1 rounded-md text-xs font-bold text-erp-text">
+                        {b.commission_percentage}%
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-center whitespace-nowrap">
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest border
+                        ${b.is_active ? 'text-emerald-600 bg-emerald-500/10 border-emerald-500/20' : 'text-red-600 bg-red-500/10 border-red-500/20'}
+                      `}>
+                        {b.is_active ? 'Activo' : 'Inactivo'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-2">
+                         <button 
+                           onClick={(e) => {
+                             e.stopPropagation();
+                             toggleBarberStatus(b.id, !!b.is_active, b.name);
+                           }}
+                           className={`p-2 rounded-lg border transition-all ${b.is_active ? 'hover:bg-red-500/10 hover:text-red-600 hover:border-red-500/30 border-erp-border text-erp-text-muted' : 'hover:bg-emerald-500/10 hover:text-emerald-600 hover:border-emerald-500/30 border-erp-border text-erp-text-muted'}`}
+                           title={b.is_active ? 'Desactivar' : 'Activar'}
+                         >
+                           {b.is_active ? <X size={16} /> : <Check size={16} />}
+                         </button>
+                         <button className="p-2 rounded-lg border border-erp-border text-erp-text-muted hover:bg-erp-surface-hover hover:text-erp-primary transition-all">
+                           <ChevronRight size={16} />
+                         </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
 
-                <form onSubmit={form.handleSubmit(handleCreateBarber)} className="space-y-6">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-medium text-white/40 uppercase tracking-wider ml-1">Nombre Completo</label>
-                    <input
-                      type="text"
-                      {...form.register('name')}
-                      className="w-full bg-bg-base border border-white/5 rounded-xl px-4 py-4 text-sm font-bold text-white outline-none focus:border-brand transition-all placeholder:font-normal uppercase tracking-wide"
-                      placeholder="Ej. Juan Pérez"
-                    />
-                    {form.formState.errors.name && <p className="text-red-500 text-[10px] ml-1 uppercase">{form.formState.errors.name.message}</p>}
+      {/* RIGHT DRAWER (PANEL LATERAL) */}
+      <AnimatePresence>
+        {isDrawerOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsDrawerOpen(false)}
+              className="fixed inset-0 bg-transparent z-[200]"
+            />
+
+            {/* Drawer */}
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed inset-y-0 right-0 w-full md:w-[500px] bg-erp-bg shadow-2xl z-[210] flex flex-col border-l border-erp-border"
+            >
+              {/* Drawer Header */}
+              <div className="h-20 border-b border-erp-border px-6 flex items-center justify-between bg-erp-surface shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-erp-primary/10 text-erp-primary flex items-center justify-center">
+                    {isAdding ? <Plus size={20} /> : <User size={20} />}
                   </div>
+                  <div>
+                    <h3 className="text-base font-black text-erp-text tracking-tight">
+                      {isAdding ? 'Nuevo Profesional' : 'Ficha Técnica'}
+                    </h3>
+                    <p className="text-xs font-medium text-erp-text-muted">
+                      {isAdding ? 'Crear credenciales' : selectedBarber?.name}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsDrawerOpen(false)}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-erp-border text-erp-text-muted hover:text-erp-text transition-all"
+                >
+                  <X size={20} />
+                </button>
+              </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Drawer Body */}
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
+                {isAdding ? (
+                  /* AGREGAR BARBERO FORM */
+                  <form onSubmit={form.handleSubmit(handleCreateBarber)} className="space-y-6">
                     <div className="space-y-2">
-                      <label className="text-[10px] font-medium text-white/40 uppercase tracking-wider ml-1">Correo Electrónico</label>
+                      <label className="text-xs font-bold text-erp-text uppercase tracking-widest ml-1">Nombre Completo</label>
+                      <input
+                        type="text"
+                        {...form.register('name')}
+                        className="w-full bg-erp-surface border border-erp-border rounded-xl px-4 py-3.5 text-sm font-semibold text-erp-text outline-none focus:border-erp-primary transition-all"
+                        placeholder="Ej. Juan Pérez"
+                      />
+                      {form.formState.errors.name && <p className="text-red-500 text-xs ml-1">{form.formState.errors.name.message}</p>}
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-erp-text uppercase tracking-widest ml-1">Correo Electrónico</label>
                       <input
                         type="email"
                         {...form.register('email')}
-                        className="w-full bg-bg-base border border-white/5 rounded-xl px-4 py-4 text-sm font-bold text-white outline-none focus:border-brand transition-all placeholder:font-normal"
-                        placeholder="barbero@tumarca.com"
+                        className="w-full bg-erp-surface border border-erp-border rounded-xl px-4 py-3.5 text-sm font-semibold text-erp-text outline-none focus:border-erp-primary transition-all"
+                        placeholder="ejemplo@correo.com"
                       />
-                      {form.formState.errors.email && <p className="text-red-500 text-[10px] ml-1 uppercase">{form.formState.errors.email.message}</p>}
+                      {form.formState.errors.email && <p className="text-red-500 text-xs ml-1">{form.formState.errors.email.message}</p>}
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[10px] font-medium text-white/40 uppercase tracking-wider ml-1">Número de Celular</label>
+                      <label className="text-xs font-bold text-erp-text uppercase tracking-widest ml-1">Número de Celular</label>
                       <input
                         type="tel"
                         {...form.register('phone')}
-                        className="w-full bg-bg-base border border-white/5 rounded-xl px-4 py-4 text-sm font-bold text-white outline-none focus:border-brand transition-all placeholder:font-normal"
+                        className="w-full bg-erp-surface border border-erp-border rounded-xl px-4 py-3.5 text-sm font-semibold text-erp-text outline-none focus:border-erp-primary transition-all"
                         placeholder="Ej. 3001234567"
                       />
-                      {form.formState.errors.phone && <p className="text-red-500 text-[10px] ml-1 uppercase">{form.formState.errors.phone.message}</p>}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-medium text-white/40 uppercase tracking-wider ml-1">Dirección de Residencia (Opcional)</label>
-                    <input
-                      type="text"
-                      {...form.register('address')}
-                      className="w-full bg-bg-base border border-white/5 rounded-xl px-4 py-4 text-sm font-bold text-white outline-none focus:border-brand transition-all placeholder:font-normal"
-                      placeholder="Ej. Calle 123 #45-67, Barrio Centro"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-medium text-white/40 uppercase tracking-wider ml-1">Contraseña Provisional</label>
-                      <div className="relative">
-                        <input
-                          type={showPassword ? 'text' : 'password'}
-                          {...form.register('password')}
-                          className="w-full bg-bg-base border border-white/5 rounded-xl pl-4 pr-12 py-4 text-sm font-bold text-white outline-none focus:border-brand transition-all placeholder:font-normal"
-                          placeholder="Mínimo 6 caracteres"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-brand transition-colors"
-                        >
-                          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                        </button>
-                      </div>
-                      {form.formState.errors.password && <p className="text-red-500 text-[10px] ml-1 uppercase">{form.formState.errors.password.message}</p>}
+                      {form.formState.errors.phone && <p className="text-red-500 text-xs ml-1">{form.formState.errors.phone.message}</p>}
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[10px] font-medium text-white/40 uppercase tracking-wider ml-1">Comisión (%)</label>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          maxLength={2}
-                          {...form.register('commission')}
-                          className="w-full bg-bg-base border border-white/5 rounded-xl px-4 py-4 text-sm font-bold text-brand outline-none focus:border-brand transition-all text-center"
-                          placeholder="50"
-                        />
-                        <div className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-white/40">%</div>
-                      </div>
-                      {form.formState.errors.commission && <p className="text-red-500 text-[10px] ml-1 uppercase">{form.formState.errors.commission.message}</p>}
+                      <label className="text-xs font-bold text-erp-text uppercase tracking-widest ml-1">Dirección (Opcional)</label>
+                      <input
+                        type="text"
+                        {...form.register('address')}
+                        className="w-full bg-erp-surface border border-erp-border rounded-xl px-4 py-3.5 text-sm font-semibold text-erp-text outline-none focus:border-erp-primary transition-all"
+                        placeholder="Ej. Calle 123"
+                      />
                     </div>
-                  </div>
 
-                  <div className="pt-4">
-                    <button
-                      type="submit"
-                      disabled={createBarber.isPending}
-                      className="w-full bg-brand text-black py-4 rounded-xl font-bold uppercase tracking-widest text-xs shadow-xl shadow-brand/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                    >
-                      {createBarber.isPending ? 'CREANDO PERFIL...' : 'REGISTRAR BARBERO'}
-                      {!createBarber.isPending && <Plus size={14} />}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            ) : selectedBarber ? (
-              <div className="animate-in fade-in slide-in-from-right-4 duration-500 h-full flex flex-col">
-                <div className="flex items-center justify-between border-b border-white/5 pb-6 mb-8">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-brand/10 border border-brand/20 rounded-xl text-brand">
-                      <User size={20} />
-                    </div>
-                    <div>
-                      <h4 className="text-lg font-bold text-white uppercase tracking-tight">{selectedBarber.name}</h4>
-                      <p className="text-[10px] font-medium text-brand uppercase tracking-widest mt-1">Ficha Técnica</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setSelectedBarber(null)}
-                    className="text-[10px] font-bold uppercase tracking-wider text-white/40 hover:text-white transition-all bg-white/5 px-3 py-1.5 rounded-lg"
-                  >
-                    Cerrar
-                  </button>
-                </div>
-
-                <div className="flex flex-col items-center justify-center flex-1 space-y-8">
-                  <div className="w-32 h-32 rounded-[2rem] bg-bg-base border-2 border-white/10 overflow-hidden shadow-2xl relative">
-                    {selectedBarber.avatar_url ? (
-                      <Image src={selectedBarber.avatar_url} alt={`Avatar de ${selectedBarber.name}`} width={128} height={128} className="w-full h-full object-cover" />
-                    ) : (
-                      <User size={48} className="w-full h-full p-8 text-white/10" />
-                    )}
-                    {!selectedBarber.is_active && (
-                      <div className="absolute inset-0 bg-red-500/80 flex items-center justify-center backdrop-blur-[2px]">
-                        <p className="text-xs font-bold text-white uppercase tracking-widest">Desactivado</p>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="text-center">
-                    <h2 className="text-2xl font-bold text-white uppercase tracking-tight mb-2">{selectedBarber.name}</h2>
-                    <div className="flex flex-col items-center gap-1 justify-center text-white/40 mt-3">
-                      <div className="flex items-center gap-2">
-                        <Mail size={14} className="text-brand" />
-                        <p className="text-[10px] font-bold uppercase tracking-widest">{selectedBarber.email || 'Sin correo'}</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Phone size={14} className="text-brand" />
-                        <p className="text-[10px] font-bold uppercase tracking-widest">{selectedBarber.phone || 'Sin teléfono'}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 w-full pt-4">
-                    <div className="bg-bg-base p-6 rounded-2xl border border-white/5 text-center flex flex-col justify-center">
-                      <p className="text-[9px] font-bold text-white/20 uppercase tracking-widest mb-2">Comisión Pactada</p>
-                      <p className="text-3xl font-bold text-brand tracking-tighter leading-none">{selectedBarber.commission_percentage}%</p>
-                    </div>
-                    <div className={`p-6 rounded-2xl border text-center flex flex-col justify-center ${selectedBarber.is_active ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-red-500/5 border-red-500/20'}`}>
-                      <p className="text-[9px] font-bold text-white/20 uppercase tracking-widest mb-2">Estado Operativo</p>
-                      <p className={`text-2xl font-bold tracking-tight uppercase ${selectedBarber.is_active ? 'text-emerald-500' : 'text-red-500'}`}>
-                        {selectedBarber.is_active ? 'Activo' : 'Desactivado'}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* NUEVA SECCIÓN: ESPECIALIDADES / SERVICIOS */}
-                  <div className="w-full bg-surface border border-white/5 p-6 rounded-2xl">
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="text-[10px] font-bold uppercase tracking-widest text-white/40">Especialidades Asignadas</h4>
-                      {editingServices ? (
-                        <div className="flex items-center gap-2">
-                           <button 
-                             onClick={() => setEditingServices(false)}
-                             className="text-[9px] font-bold uppercase bg-white/5 px-2 py-1 rounded text-white/40 hover:text-white"
-                           >
-                             Cancelar
-                           </button>
-                           <button 
-                             onClick={() => setBarberServices([])}
-                             className="text-[9px] font-bold uppercase bg-red-500/10 text-red-500 px-2 py-1 rounded hover:bg-red-500 hover:text-white"
-                           >
-                             Limpiar
-                           </button>
-                           <button 
-                             disabled={updateBarberServices.isPending}
-                             onClick={() => {
-                               updateBarberServices.mutate(
-                                 { barber_id: selectedBarber.id, service_ids: barberServices },
-                                 { 
-                                   onSuccess: () => {
-                                     setEditingServices(false);
-                                     setSelectedBarber(prev => prev ? {
-                                       ...prev,
-                                       barber_services: barberServices.map(id => ({ service_id: id }))
-                                     } : null);
-                                     refetch();
-                                   } 
-                                 }
-                               );
-                             }}
-                             className="text-[9px] font-bold uppercase bg-brand/20 text-brand px-2 py-1 rounded hover:bg-brand hover:text-black flex items-center gap-1"
-                           >
-                             {updateBarberServices.isPending ? 'Guardando...' : <><Check size={12}/> Guardar</>}
-                           </button>
-                        </div>
-                      ) : barberServices.length > 0 && (
-                        <button 
-                          onClick={() => setEditingServices(true)}
-                          className="text-[9px] font-bold uppercase bg-white/5 px-2 py-1 rounded text-white/40 hover:text-white flex items-center gap-1"
-                        >
-                          <Edit size={12} /> Editar
-                        </button>
-                      )}
-                    </div>
-                    
-                    <div className="flex flex-wrap gap-2">
-                      {baseData?.services?.map(service => {
-                        const isSelected = barberServices.includes(service.id);
-                        if (!editingServices && !isSelected) return null;
-                        
-                        return (
-                          <div 
-                            key={service.id}
-                            onClick={() => {
-                              if (!editingServices) return;
-                              if (isSelected) setBarberServices(prev => prev.filter(id => id !== service.id));
-                              else setBarberServices(prev => [...prev, service.id]);
-                            }}
-                            className={`px-3 py-1.5 rounded-lg border text-[10px] font-bold uppercase tracking-wider transition-all ${editingServices ? 'cursor-pointer' : ''} ${isSelected 
-                              ? 'bg-brand/10 border-brand/30 text-brand' 
-                              : 'bg-bg-base border-white/5 text-white/40 hover:border-white/20'}`}
-                          >
-                            {service.name}
-                          </div>
-                        );
-                      })}
-                      {!editingServices && barberServices.length === 0 && (
-                        <div className="flex flex-col items-center justify-center w-full py-4 gap-3 bg-white/5 rounded-xl border border-white/10 border-dashed">
-                          <p className="text-[10px] text-white/40 uppercase tracking-widest italic">Este barbero no tiene especialidades</p>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-erp-text uppercase tracking-widest ml-1">Contraseña</label>
+                        <div className="relative">
+                          <input
+                            type={showPassword ? 'text' : 'password'}
+                            {...form.register('password')}
+                            className="w-full bg-erp-surface border border-erp-border rounded-xl pl-4 pr-10 py-3.5 text-sm font-semibold text-erp-text outline-none focus:border-erp-primary transition-all"
+                            placeholder="Mínimo 6"
+                          />
                           <button
-                            onClick={() => setEditingServices(true)}
-                            className="text-[10px] font-bold uppercase bg-brand/20 text-brand px-4 py-2 rounded-lg hover:bg-brand hover:text-black transition-all flex items-center gap-2"
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-erp-text-muted hover:text-erp-primary"
                           >
-                            <Plus size={14} /> Asignarle Especialidades
+                            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                           </button>
                         </div>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {/* Nuevas Métricas Detalladas */}
-                  <div className="grid grid-cols-3 gap-4 w-full">
-                     <div className="bg-bg-base p-6 rounded-2xl border border-white/5 text-center flex flex-col justify-center">
-                        <p className="text-[9px] font-bold text-white/20 uppercase tracking-widest mb-2">Servicios Hoy</p>
-                        <p className="text-2xl font-bold text-white tracking-tighter leading-none">{selectedBarber.todayAptsCount}</p>
-                     </div>
-                     <div className="bg-bg-base p-6 rounded-2xl border border-white/5 text-center flex flex-col justify-center">
-                        <p className="text-[9px] font-bold text-white/20 uppercase tracking-widest mb-2">Ventas Generadas</p>
-                        <p className="text-2xl font-bold text-white tracking-tighter leading-none">{formatPrice(selectedBarber.todayIncome)}</p>
-                     </div>
-                     <div className="bg-brand/5 p-6 rounded-2xl border border-brand/20 text-center flex flex-col justify-center">
-                        <p className="text-[9px] font-bold text-brand/60 uppercase tracking-widest mb-2">Ganancia Local</p>
-                        <p className="text-2xl font-bold text-brand tracking-tighter leading-none">{formatPrice(selectedBarber.todayOwnerCut)}</p>
-                     </div>
-                  </div>
-                  
-                  {/* LIQUIDACIONES */}
-                  <div className="mt-8 pt-8 border-t border-white/5">
-                     <div className="flex items-center justify-between mb-6">
-                        <div className="flex items-center gap-3">
-                           <div className="p-2 bg-brand/10 border border-brand/20 rounded-lg text-brand">
-                              <Activity size={16} />
-                           </div>
-                           <div>
-                              <h4 className="text-sm font-bold text-white uppercase tracking-tight">Liquidaciones Pendientes</h4>
-                              <p className="text-[10px] text-white/40 uppercase tracking-widest">{pendingServices.length} servicios por liquidar</p>
-                           </div>
+                        {form.formState.errors.password && <p className="text-red-500 text-xs ml-1">{form.formState.errors.password.message}</p>}
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-erp-text uppercase tracking-widest ml-1">Comisión (%)</label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            maxLength={2}
+                            {...form.register('commission')}
+                            className="w-full bg-erp-surface border border-erp-border rounded-xl px-4 py-3.5 text-sm font-semibold text-erp-primary outline-none focus:border-erp-primary transition-all text-center"
+                            placeholder="50"
+                          />
+                          <div className="absolute right-4 top-1/2 -translate-y-1/2 text-erp-text-muted">%</div>
                         </div>
-                     </div>
-                     
-                     {pendingServices.length > 0 ? (
-                        <div className="bg-black border border-brand/20 rounded-2xl p-6 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-6 relative overflow-hidden">
-                           <div className="relative z-10 space-y-1 w-full sm:w-auto text-center sm:text-left">
-                              <p className="text-[10px] font-medium uppercase tracking-wider text-white/40">Total a Pagar ({selectedBarber.commission_percentage || 50}%)</p>
-                              <p className="text-3xl font-bold tracking-tight text-white">{formatPrice(pendingBarberCut)}</p>
-                           </div>
+                        {form.formState.errors.commission && <p className="text-red-500 text-xs ml-1">{form.formState.errors.commission.message}</p>}
+                      </div>
+                    </div>
+                    
+                    <div className="pt-2">
+                      <label className="text-xs font-bold text-erp-text uppercase tracking-widest ml-1 mb-2 block">Especialidades Iniciales</label>
+                      <div className="flex flex-wrap gap-2">
+                        {baseData?.services?.map(service => {
+                          const isSelected = newBarberServices.includes(service.id);
+                          return (
+                            <div 
+                              key={service.id}
+                              onClick={() => {
+                                if (isSelected) {
+                                  const next = newBarberServices.filter(id => id !== service.id);
+                                  setNewBarberServices(next);
+                                } else {
+                                  const next = [...newBarberServices, service.id];
+                                  setNewBarberServices(next);
+                                  setServiceError(false);
+                                }
+                              }}
+                              className={`px-3 py-1.5 rounded-lg border text-xs font-bold cursor-pointer transition-all ${isSelected ? 'bg-erp-primary/10 border-erp-primary/30 text-erp-primary' : 'bg-erp-bg border-erp-border text-erp-text-muted hover:border-erp-primary/30'}`}
+                            >
+                              {service.name}
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {serviceError && <p className="text-red-500 text-xs mt-2 ml-1">Debes seleccionar al menos una especialidad</p>}
+                    </div>
+
+                    <div className="pt-6">
+                      <button
+                        type="submit"
+                        disabled={createBarber.isPending || (createBarber.isSuccess && updateBarberServices.isPending)}
+                        className="w-full bg-erp-primary text-white py-4 rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-erp-primary/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {(createBarber.isPending || updateBarberServices.isPending) ? 'REGISTRANDO...' : 'GUARDAR PROFESIONAL'}
+                      </button>
+                    </div>
+                  </form>
+                ) : selectedBarber ? (
+                  /* DETALLE DEL BARBERO */
+                  <div className="space-y-8">
+                    {/* Header Perfil */}
+                    <div className="flex flex-col items-center text-center">
+                      <div className="w-24 h-24 rounded-2xl bg-erp-surface border border-erp-border overflow-hidden mb-4 relative shadow-sm">
+                        {selectedBarber.avatar_url ? (
+                          <Image src={selectedBarber.avatar_url} alt={selectedBarber.name} width={96} height={96} className="w-full h-full object-cover" />
+                        ) : (
+                          <User size={40} className="w-full h-full p-4 text-erp-text-muted" />
+                        )}
+                        {!selectedBarber.is_active && (
+                          <div className="absolute inset-0 bg-red-500/80 flex items-center justify-center backdrop-blur-sm">
+                            <p className="text-[10px] font-bold text-white uppercase tracking-widest">Inactivo</p>
+                          </div>
+                        )}
+                      </div>
+                      <h2 className="text-2xl font-black text-erp-text uppercase tracking-tight">{selectedBarber.name}</h2>
+                      <div className="flex items-center gap-4 mt-2">
+                        <div className="flex items-center gap-1 text-xs font-medium text-erp-text-muted">
+                          <Mail size={12} /> {selectedBarber.email || 'N/A'}
+                        </div>
+                        <div className="flex items-center gap-1 text-xs font-medium text-erp-text-muted">
+                          <Phone size={12} /> {selectedBarber.phone || 'N/A'}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* KPIs de Rendimiento Hoy */}
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="bg-erp-surface border border-erp-border p-4 rounded-xl text-center">
+                        <p className="text-[9px] font-bold text-erp-text-muted uppercase tracking-widest mb-1">Cortes Hoy</p>
+                        <p className="text-xl font-black text-erp-text">{selectedBarber.todayAptsCount}</p>
+                      </div>
+                      <div className="bg-erp-surface border border-erp-border p-4 rounded-xl text-center">
+                        <p className="text-[9px] font-bold text-erp-text-muted uppercase tracking-widest mb-1">Ingreso</p>
+                        <p className="text-lg font-black text-erp-text">{formatPrice(selectedBarber.todayIncome)}</p>
+                      </div>
+                      <div className="bg-erp-primary/5 border border-erp-primary/20 p-4 rounded-xl text-center">
+                        <p className="text-[9px] font-bold text-erp-primary uppercase tracking-widest mb-1">Utilidad</p>
+                        <p className="text-lg font-black text-erp-primary">{formatPrice(selectedBarber.todayOwnerCut)}</p>
+                      </div>
+                    </div>
+
+                    {/* Especialidades */}
+                    <div className="bg-erp-surface border border-erp-border p-5 rounded-xl">
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-[10px] font-bold text-erp-text-muted uppercase tracking-widest">Especialidades</h4>
+                        {editingServices ? (
+                          <div className="flex gap-2">
+                             <button onClick={() => setEditingServices(false)} className="text-xs font-bold text-erp-text-muted hover:text-erp-text">Cancelar</button>
+                             <button onClick={() => setBarberServices([])} className="text-xs font-bold text-red-500 hover:text-red-700">Limpiar</button>
+                             <button 
+                               disabled={updateBarberServices.isPending}
+                               onClick={() => {
+                                 updateBarberServices.mutate(
+                                   { barber_id: selectedBarber.id, service_ids: barberServices },
+                                   { 
+                                     onSuccess: () => {
+                                       setEditingServices(false);
+                                       setSelectedBarber(prev => prev ? { ...prev, barber_services: barberServices.map(id => ({ service_id: id })) } : null);
+                                       refetch();
+                                     } 
+                                   }
+                                 );
+                               }}
+                               className="text-xs font-bold text-erp-primary hover:text-erp-primary/80"
+                             >
+                               {updateBarberServices.isPending ? 'Guardando...' : 'Guardar'}
+                             </button>
+                          </div>
+                        ) : barberServices.length > 0 && (
+                          <button onClick={() => setEditingServices(true)} className="text-xs font-bold text-erp-text-muted hover:text-erp-primary flex items-center gap-1">
+                            <Edit size={12} /> Editar
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {baseData?.services?.map(service => {
+                          const isSelected = barberServices.includes(service.id);
+                          if (!editingServices && !isSelected) return null;
+                          return (
+                            <div 
+                              key={service.id}
+                              onClick={() => {
+                                if (!editingServices) return;
+                                if (isSelected) setBarberServices(prev => prev.filter(id => id !== service.id));
+                                else setBarberServices(prev => [...prev, service.id]);
+                              }}
+                              className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition-all ${editingServices ? 'cursor-pointer' : ''} ${isSelected ? 'bg-erp-primary/10 border-erp-primary/30 text-erp-primary' : 'bg-erp-bg border-erp-border text-erp-text-muted'}`}
+                            >
+                              {service.name}
+                            </div>
+                          );
+                        })}
+                        {!editingServices && barberServices.length === 0 && (
+                          <div className="w-full py-4 text-center">
+                            <p className="text-xs text-erp-text-muted mb-2">Sin especialidades</p>
+                            <button onClick={() => setEditingServices(true)} className="text-[10px] font-bold uppercase text-erp-primary border border-erp-primary/20 px-3 py-1.5 rounded-lg hover:bg-erp-primary/10">Asignar</button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Liquidaciones Pendientes */}
+                    <div className="border-t border-erp-border pt-6">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Activity size={16} className="text-erp-primary" />
+                        <h4 className="text-sm font-bold text-erp-text uppercase tracking-tight">Liquidaciones Pendientes</h4>
+                      </div>
+                      
+                      {pendingServices.length > 0 ? (
+                        <div className="bg-erp-bg border border-erp-border rounded-xl p-5 shadow-sm text-center">
+                           <p className="text-[10px] font-bold text-erp-text-muted uppercase tracking-widest mb-1">{pendingServices.length} servicios por liquidar</p>
+                           <p className="text-3xl font-black text-erp-text mb-4">{formatPrice(pendingBarberCut)}</p>
                            <button 
                               disabled={createSettlement.isPending}
                               onClick={() => {
                                  Swal.fire({
-                                    title: '¿LIQUIDAR BARBERO?',
-                                    text: `Se marcarán ${pendingServices.length} servicios como liquidados por un total de {formatPrice(pendingBarberCut)}.`,
-                                    icon: 'question',
+                                    title: 'Confirmar Liquidación',
+                                    text: `Se pagará ${formatPrice(pendingBarberCut)} al profesional.`,
+                                    icon: 'info',
                                     showCancelButton: true,
-                                    confirmButtonColor: '#10b981',
-                                    confirmButtonText: 'CONFIRMAR PAGO',
-                                    cancelButtonText: 'CANCELAR',
-                                    background: '#111',
-                                    color: '#fff'
+                                    confirmButtonColor: 'var(--color-erp-primary)',
+                                    confirmButtonText: 'CONFIRMAR',
+                                    cancelButtonText: 'CANCELAR'
                                  }).then(result => {
                                     if (result.isConfirmed) {
                                        createSettlement.mutate({
@@ -542,38 +592,24 @@ export default function TeamPage() {
                                     }
                                  });
                               }}
-                              className="w-full sm:w-auto bg-brand text-black px-8 py-4 rounded-xl font-bold uppercase tracking-widest text-xs shadow-xl shadow-brand/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 relative z-10 flex items-center justify-center gap-2"
+                              className="w-full bg-erp-primary text-white py-3 rounded-xl font-bold uppercase tracking-widest text-[10px] hover:bg-erp-primary/90 transition-all disabled:opacity-50"
                            >
                               {createSettlement.isPending ? 'PROCESANDO...' : 'LIQUIDAR SERVICIOS'}
-                              {!createSettlement.isPending && <Check size={16} />}
                            </button>
-                           <Activity size={120} className="absolute -bottom-10 -right-4 opacity-5 text-brand" />
                         </div>
-                     ) : (
-                        <div className="border border-dashed border-white/10 rounded-2xl p-8 text-center flex flex-col items-center justify-center">
-                           <Activity size={24} className="text-white/20 mb-3" />
-                           <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">No hay pagos pendientes para este artesano</p>
+                      ) : (
+                        <div className="bg-erp-surface rounded-xl p-6 text-center border border-erp-border border-dashed">
+                           <p className="text-xs font-medium text-erp-text-muted">No hay pagos pendientes</p>
                         </div>
-                     )}
+                      )}
+                    </div>
                   </div>
-                </div>
-
-
+                ) : null}
               </div>
-            ) : (
-              <div className="h-full min-h-[50vh] border border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center text-center p-12 opacity-60">
-                <div className="p-6 bg-black border border-white/10 rounded-2xl mb-6">
-                  <Users size={40} className="text-white/20" />
-                </div>
-                <h4 className="text-lg font-bold text-white uppercase tracking-wider mb-2">Perfil de Barbero</h4>
-                <p className="text-xs text-white/40 font-medium uppercase tracking-wider max-w-xs leading-relaxed">
-                  Selecciona un miembro de la lista para ver su perfil detallado o haz clic en &quot;Nuevo Miembro&quot; para registrar uno nuevo.
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -6,7 +6,6 @@ import {
   History,
   TrendingDown,
   TrendingUp,
-  DollarSign,
   Download
 } from 'lucide-react';
 import { useOwnerStats } from '@/hooks/owner';
@@ -16,7 +15,7 @@ import { formatPrice } from '@/lib/format';
 
 export default function ReportsPage() {
   const [historyFilter, setHistoryFilter] = useState('month');
-  const [customRange, setCustomRange] = useState({ from: new Date(), to: new Date() });
+  const [customRange] = useState({ from: new Date(), to: new Date() });
   
   const { data: historicalStats, isLoading: historyLoading } = useOwnerStats(
     historyFilter, 
@@ -87,169 +86,132 @@ export default function ReportsPage() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-5xl mx-auto pb-32">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        <div className="flex items-center gap-5">
-          <div className="p-4 bg-surface border border-white/5 rounded-2xl shadow-xl text-blue-400">
-            <BarChart3 size={28} />
-          </div>
-          <div>
-            <p className="text-blue-400 text-[10px] font-bold uppercase tracking-[0.2em] mb-1">Análisis Histórico</p>
-            <h2 className="text-3xl font-bold tracking-tight text-white uppercase">Reportes Financieros</h2>
-          </div>
-        </div>
-
-        <div className="flex flex-col sm:flex-row items-center gap-2">
-          <select 
-            value={historyFilter}
-            onChange={(e) => setHistoryFilter(e.target.value)}
-            className="bg-surface border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white outline-none cursor-pointer font-bold uppercase tracking-widest focus:border-blue-500 transition-all"
-          >
-            <option value="today">Hoy</option>
-            <option value="week">Esta Semana</option>
-            <option value="month">Este Mes</option>
-            <option value="custom">Rango Personalizado</option>
-          </select>
-        </div>
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto pb-32 font-sans">
+      
+      {/* HEADER ERP */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-erp-bg border border-erp-border p-6 rounded-2xl shadow-sm">
+         <div className="flex items-center gap-5">
+            <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-xl text-indigo-600 shadow-sm shrink-0">
+               <BarChart3 size={24} />
+            </div>
+            <div>
+               <h2 className="text-2xl font-black text-erp-text tracking-tight uppercase">Reportes y Auditoría</h2>
+               <p className="text-sm font-medium text-erp-text-muted mt-0.5">Analiza el historial de transacciones de tu barbería</p>
+            </div>
+         </div>
+         
+         <div className="flex items-center gap-2 bg-erp-surface border border-erp-border p-1.5 rounded-xl shadow-sm">
+            {[
+              { id: 'today', label: 'Hoy' },
+              { id: 'week', label: 'Semana' },
+              { id: 'month', label: 'Mes' },
+              { id: 'year', label: 'Año' },
+              { id: 'all', label: 'Todo' }
+            ].map(f => (
+               <button
+                  key={f.id}
+                  onClick={() => setHistoryFilter(f.id)}
+                  className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${historyFilter === f.id ? 'bg-erp-primary text-white shadow-sm' : 'text-erp-text-muted hover:text-erp-text'}`}
+               >
+                  {f.label}
+               </button>
+            ))}
+         </div>
       </div>
 
-      {historyFilter === 'custom' && (
-        <div className="flex items-center justify-end gap-2 mb-4 bg-surface/50 p-3 rounded-2xl border border-white/5 w-fit ml-auto">
-          <input 
-            type="date" 
-            value={format(customRange.from, 'yyyy-MM-dd')}
-            onChange={(e) => setCustomRange(prev => ({ ...prev, from: new Date(e.target.value) }))}
-            className="bg-bg-base border border-white/10 rounded-xl px-4 py-2 text-sm text-white outline-none focus:border-blue-500"
-          />
-          <span className="text-white/40 font-bold px-2">-</span>
-          <input 
-            type="date" 
-            value={format(customRange.to, 'yyyy-MM-dd')}
-            onChange={(e) => setCustomRange(prev => ({ ...prev, to: new Date(e.target.value) }))}
-            className="bg-bg-base border border-white/10 rounded-xl px-4 py-2 text-sm text-white outline-none focus:border-blue-500"
-          />
-        </div>
-      )}
-
-      {historyLoading ? (
-        <div className="flex items-center justify-center min-h-[50vh]">
-          <div className="w-8 h-8 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
-        </div>
-      ) : (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-surface border border-white/5 rounded-3xl p-8 relative overflow-hidden group hover:border-white/10 transition-all shadow-xl">
-            <div className="absolute -right-6 -top-6 w-32 h-32 bg-white/5 rounded-full blur-3xl group-hover:bg-white/10 transition-all"></div>
-            <div className="flex items-center justify-between mb-8 relative z-10">
-              <div className="p-3 bg-white/5 rounded-2xl text-white">
-                <DollarSign size={24} />
-              </div>
-              <span className="text-[10px] font-black uppercase tracking-widest text-white/40">Ventas Brutas</span>
-            </div>
-            <div className="relative z-10">
-              <p className="text-4xl font-black italic tracking-tighter text-white">${historicalStats?.grossIncome?.toLocaleString() || 0}</p>
-              <p className="text-xs font-bold text-white/40 uppercase tracking-widest mt-1">Total Ingresado</p>
-            </div>
-          </div>
-
-          <div className="bg-surface border border-white/5 rounded-3xl p-8 relative overflow-hidden group hover:border-red-500/30 transition-all shadow-xl">
-            <div className="absolute -right-6 -top-6 w-32 h-32 bg-red-500/5 rounded-full blur-3xl group-hover:bg-red-500/10 transition-all"></div>
-            <div className="flex items-center justify-between mb-8 relative z-10">
-              <div className="p-3 bg-red-500/10 rounded-2xl text-red-500">
-                <TrendingDown size={24} />
-              </div>
-              <span className="text-[10px] font-black uppercase tracking-widest text-red-500">Egresos</span>
-            </div>
-            <div className="relative z-10">
-              <p className="text-4xl font-black italic tracking-tighter text-red-500">-${historicalStats?.expense?.toLocaleString() || 0}</p>
-              <p className="text-xs font-bold text-white/40 uppercase tracking-widest mt-1">Gastos Operativos</p>
-            </div>
-          </div>
-
-          <div className="bg-surface border border-white/5 rounded-3xl p-8 relative overflow-hidden group hover:border-emerald-500/30 transition-all shadow-xl">
-            <div className="absolute -right-6 -top-6 w-32 h-32 bg-emerald-500/5 rounded-full blur-3xl group-hover:bg-emerald-500/10 transition-all"></div>
-            <div className="flex items-center justify-between mb-8 relative z-10">
-              <div className="p-3 bg-emerald-500/10 rounded-2xl text-emerald-500">
-                <TrendingUp size={24} />
-              </div>
-              <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Utilidad Libre</span>
-            </div>
-            <div className="relative z-10">
-              <p className={`text-4xl font-black italic tracking-tighter ${((historicalStats?.profit || 0) >= 0) ? 'text-emerald-500' : 'text-red-500'}`}>
-                ${historicalStats?.profit?.toLocaleString() || 0}
-              </p>
-              <p className="text-xs font-bold text-white/40 uppercase tracking-widest mt-1 flex items-center justify-between">
-                <span>Ganancia Neta</span>
-                <span className="text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded text-[9px]">Margen: {historicalStats?.margin?.toFixed(1) || 0}%</span>
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* TABLA DETALLADA */}
-        <div className="bg-surface border border-white/5 rounded-3xl p-6 shadow-xl mt-8">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 pb-4 border-b border-white/10">
-            <h3 className="text-lg font-bold text-white uppercase tracking-widest flex items-center gap-2">
-              <History size={18} className="text-blue-400"/> Detalle de Transacciones
+      <div className="bg-erp-surface border border-erp-border rounded-2xl shadow-sm overflow-hidden flex flex-col min-h-[50vh]">
+         {/* HEADER TABLA */}
+         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-6 border-b border-erp-border bg-erp-bg">
+            <h3 className="text-lg font-black uppercase tracking-tight text-erp-text flex items-center gap-2">
+               <History size={18} className="text-erp-primary" /> Historial de Transacciones
             </h3>
+            
             <button 
-              onClick={exportToExcel}
-              disabled={transactions.length === 0}
-              className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-xl font-bold uppercase tracking-widest text-xs flex items-center gap-2 transition-all disabled:opacity-50"
+               onClick={exportToExcel}
+               disabled={transactions.length === 0}
+               className="w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Download size={16} /> Descargar Excel
+               <Download size={14} />
+               Exportar Excel CSV
             </button>
-          </div>
+         </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-white/10 text-[10px] font-black uppercase tracking-widest text-white/40">
-                  <th className="p-4">Fecha</th>
-                  <th className="p-4">Tipo</th>
-                  <th className="p-4">Concepto</th>
-                  <th className="p-4">Barbero</th>
-                  <th className="p-4 text-right">Ingreso Bruto</th>
-                  <th className="p-4 text-right text-red-400">Pago Barbero</th>
-                  <th className="p-4 text-right text-emerald-400">Neto Local</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {transactions.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="p-8 text-center text-white/30 text-sm italic font-bold uppercase tracking-widest">
-                      No hay transacciones en este periodo
-                    </td>
-                  </tr>
-                ) : (
-                  transactions.map(t => (
-                    <tr key={`${t.type}-${t.id}`} className="hover:bg-white/5 transition-colors">
-                      <td className="p-4 text-xs font-medium text-white/70 whitespace-nowrap">{format(t.date, 'dd/MM/yyyy HH:mm')}</td>
-                      <td className="p-4">
-                        <span className={`px-2 py-1 rounded text-[9px] font-black uppercase tracking-widest ${t.type === 'Ingreso' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
-                          {t.type}
-                        </span>
-                      </td>
-                      <td className="p-4 text-sm font-bold text-white max-w-[200px] truncate" title={t.description}>{t.description}</td>
-                      <td className="p-4 text-xs font-bold text-white/70">{t.barber}</td>
-                      <td className="p-4 text-right font-black italic tracking-tighter text-white">
-                        {t.gross > 0 ? formatPrice(t.gross) : '-'}
-                      </td>
-                      <td className="p-4 text-right font-black italic tracking-tighter text-red-400">
-                        {t.commission > 0 ? `-${formatPrice(t.commission)}` : '-'}
-                      </td>
-                      <td className={`p-4 text-right font-black italic tracking-tighter ${t.net >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                        {formatPrice(t.net)}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-        </>
-      )}
+         {/* DATA GRID (TABLA) */}
+         {historyLoading ? (
+            <div className="flex-1 flex items-center justify-center py-20">
+               <div className="w-8 h-8 border-4 border-erp-primary/20 border-t-erp-primary rounded-full animate-spin"></div>
+            </div>
+         ) : transactions.length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center text-center opacity-60 p-12">
+               <History size={48} className="text-erp-text-muted mb-4" />
+               <p className="text-sm font-bold text-erp-text uppercase tracking-widest">No hay transacciones</p>
+               <p className="text-xs text-erp-text-muted mt-2">Prueba cambiando el rango de fechas</p>
+            </div>
+         ) : (
+            <div className="flex-1 overflow-x-auto custom-scrollbar">
+               <table className="w-full text-left border-collapse">
+                  <thead>
+                     <tr className="bg-erp-bg border-b border-erp-border">
+                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-erp-text-muted whitespace-nowrap">Fecha</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-erp-text-muted whitespace-nowrap">Concepto</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-erp-text-muted whitespace-nowrap">Barbero (Si aplica)</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-erp-text-muted text-right whitespace-nowrap">Bruto</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-erp-text-muted text-right whitespace-nowrap">Comisión</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-erp-text-muted text-right whitespace-nowrap">Neto Local</th>
+                     </tr>
+                  </thead>
+                  <tbody className="divide-y divide-erp-border">
+                     {transactions.map((t, i) => (
+                        <tr
+                           key={`${t.id}-${i}`}
+                           className="group hover:bg-erp-bg transition-colors"
+                        >
+                           <td className="px-6 py-4 whitespace-nowrap text-xs font-bold text-erp-text-muted">
+                              {format(t.date, 'dd/MM/yyyy HH:mm')}
+                           </td>
+                           <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center gap-3">
+                                 {t.type === 'Ingreso' ? (
+                                    <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100 shrink-0">
+                                       <TrendingUp size={14} />
+                                    </div>
+                                 ) : (
+                                    <div className="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center border border-red-100 shrink-0">
+                                       <TrendingDown size={14} />
+                                    </div>
+                                 )}
+                                 <div>
+                                    <p className="text-xs font-black text-erp-text uppercase tracking-tight">{t.type}</p>
+                                    <p className="text-[10px] font-bold text-erp-text-muted uppercase tracking-wider">{t.description}</p>
+                                 </div>
+                              </div>
+                           </td>
+                           <td className="px-6 py-4 whitespace-nowrap">
+                              <span className="text-xs font-bold text-erp-text">{t.barber}</span>
+                           </td>
+                           <td className="px-6 py-4 text-right whitespace-nowrap">
+                              <span className={`text-xs font-black ${t.gross > 0 ? 'text-emerald-600' : 'text-erp-text-muted'}`}>
+                                 {t.gross > 0 ? formatPrice(t.gross) : '-'}
+                              </span>
+                           </td>
+                           <td className="px-6 py-4 text-right whitespace-nowrap">
+                              <span className={`text-xs font-black ${t.commission > 0 ? 'text-red-600' : 'text-erp-text-muted'}`}>
+                                 {t.commission > 0 ? `-${formatPrice(t.commission)}` : '-'}
+                              </span>
+                           </td>
+                           <td className="px-6 py-4 text-right whitespace-nowrap">
+                              <span className={`text-sm font-black ${t.net > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                                 {t.net > 0 ? '+' : ''}{formatPrice(t.net)}
+                              </span>
+                           </td>
+                        </tr>
+                     ))}
+                  </tbody>
+               </table>
+            </div>
+         )}
+      </div>
+
     </div>
   );
 }

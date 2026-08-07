@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Search, Lock, User, KeyRound, Loader2, ShieldAlert, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
+import Swal from 'sweetalert2';
 
 export default function UsersManagementPage() {
   const [isUnlocked, setIsUnlocked] = useState(false);
@@ -56,7 +57,7 @@ export default function UsersManagementPage() {
       .from('profiles')
       .select('*')
       .neq('role', 'owner') 
-      .or(`name.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`)
+      .or(`name.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`)
       .order('name')
       .limit(10);
       
@@ -70,8 +71,23 @@ export default function UsersManagementPage() {
   };
 
   const handleResetPassword = async (userId: string, userName: string) => {
-    const confirm = window.confirm(`¿Seguro que deseas establecer la contraseña temporal "123456" para ${userName}?`);
-    if (!confirm) return;
+    const { value: newPassword } = await Swal.fire({
+      title: 'Resetear Contraseña',
+      html: `Escribe una contraseña temporal para <b>${userName}</b>.<br><small class="text-gray-500">El usuario podrá cambiarla desde su perfil.</small>`,
+      input: 'text',
+      inputPlaceholder: 'Mínimo 6 caracteres',
+      showCancelButton: true,
+      confirmButtonText: 'Resetear',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: 'var(--color-erp-primary)',
+      cancelButtonColor: '#ef4444',
+      inputValidator: (value) => {
+        if (!value) return 'Debes ingresar una contraseña';
+        if (value.length < 6) return 'La contraseña debe tener al menos 6 caracteres';
+      }
+    });
+
+    if (!newPassword) return;
 
     setResettingId(userId);
 
@@ -89,18 +105,19 @@ export default function UsersManagementPage() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`
         },
-        body: JSON.stringify({ userId })
+        body: JSON.stringify({ userId, newPassword })
       });
 
       const result = await res.json();
 
       if (res.ok) {
-        toast.success(`Contraseña de ${userName} reseteada a: 123456`);
+        toast.success(`Contraseña de ${userName} reseteada exitosamente.`);
       } else {
         toast.error(result.error || 'Error al resetear la contraseña');
       }
-    } catch {
-      toast.error('Error de red al intentar resetear la contraseña');
+    } catch (err) {
+      console.error(err);
+      toast.error('Error de conexión');
     } finally {
       setResettingId(null);
     }
@@ -108,42 +125,49 @@ export default function UsersManagementPage() {
 
   if (!isUnlocked) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh]">
-        <div className="bg-black/20 p-8 rounded-3xl border border-white/10 w-full max-w-md backdrop-blur-md shadow-xl text-center">
-          <div className="mx-auto w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mb-6">
-            <ShieldAlert size={32} className="text-red-400" />
-          </div>
-          <h2 className="text-2xl font-black text-white uppercase italic mb-2">Zona de Seguridad</h2>
-          <p className="text-white/60 text-sm mb-6">
-            Ingresa tu contraseña de dueño para acceder a la gestión de usuarios y recuperar contraseñas.
-          </p>
+      <div className="flex flex-col items-center justify-center min-h-[70vh] animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="bg-erp-surface border border-erp-border p-10 rounded-2xl shadow-xl w-full max-w-md text-center relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1 bg-red-600" />
           
-          <form onSubmit={handleUnlock} className="space-y-4">
+          <div className="w-20 h-20 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm border border-red-100">
+            <Lock size={32} />
+          </div>
+          
+          <h2 className="text-2xl font-black text-erp-text tracking-tight uppercase mb-2">Acceso Restringido</h2>
+          <p className="text-sm font-medium text-erp-text-muted mb-8 px-4">
+            Ingresa tu contraseña de administrador para gestionar las credenciales de tu equipo.
+          </p>
+
+          <form onSubmit={handleUnlock} className="space-y-6">
             <div className="relative group text-left">
-              <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 group-focus-within:text-[#f59e0b]" />
+              <label className="text-[10px] font-bold uppercase tracking-widest text-erp-text-muted mb-1 block ml-1">Contraseña de Dueño</label>
               <input
                 type={showPassword ? 'text' : 'password'}
-                className="w-full h-12 bg-white/5 border border-white/10 rounded-2xl pl-12 pr-12 text-white text-sm focus:outline-none focus:border-[#f59e0b]"
-                placeholder="Tu contraseña actual"
+                className="w-full bg-erp-bg border border-erp-border rounded-xl px-4 py-3.5 text-sm font-bold text-erp-text outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/20 transition-all shadow-sm pr-12"
+                placeholder="••••••••"
                 value={unlockPassword}
-                onChange={e => setUnlockPassword(e.target.value)}
+                onChange={(e) => setUnlockPassword(e.target.value)}
                 required
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 hover:text-[#f59e0b] transition-colors"
+                className="absolute right-4 top-[30px] p-1 text-erp-text-muted hover:text-erp-text transition-colors"
               >
-                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
             
             <button
               type="submit"
-              disabled={isUnlocking}
-              className="w-full bg-[#f59e0b] hover:bg-white text-black h-12 rounded-2xl font-black uppercase tracking-widest text-[11px] flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+              disabled={isUnlocking || !unlockPassword}
+              className="w-full bg-red-600 text-white font-black uppercase tracking-widest text-xs py-4 rounded-xl shadow-md hover:bg-red-700 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              {isUnlocking ? <Loader2 size={16} className="animate-spin" /> : 'Desbloquear'}
+              {isUnlocking ? (
+                <><Loader2 size={16} className="animate-spin" /> VERIFICANDO...</>
+              ) : (
+                <><ShieldAlert size={16} /> DESBLOQUEAR PANEL</>
+              )}
             </button>
           </form>
         </div>
@@ -152,81 +176,106 @@ export default function UsersManagementPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-black text-white uppercase italic">Recuperación de Usuarios</h1>
-          <p className="text-white/60 text-sm">Resetea la contraseña de clientes y barberos</p>
-        </div>
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto pb-32">
+      
+      {/* HEADER ERP */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-erp-bg border border-erp-border p-6 rounded-2xl shadow-sm">
+         <div className="flex items-center gap-5">
+            <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 shadow-sm shrink-0">
+               <ShieldAlert size={24} />
+            </div>
+            <div>
+               <h2 className="text-2xl font-black text-erp-text tracking-tight uppercase">Seguridad y Accesos</h2>
+               <p className="text-sm font-medium text-erp-text-muted mt-0.5">Controla las credenciales de tu equipo de trabajo</p>
+            </div>
+         </div>
       </div>
 
-      <div className="bg-black/20 p-6 rounded-3xl border border-white/10 backdrop-blur-md">
-        <form onSubmit={handleSearch} className="mb-6 flex gap-3">
-          <div className="relative flex-1">
-            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" />
-            <input
-              type="text"
-              placeholder="Buscar por nombre o número de celular..."
-              className="w-full h-12 bg-white/5 border border-white/10 rounded-2xl pl-12 pr-4 text-white text-sm focus:outline-none focus:border-[#f59e0b]"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <button 
-            type="submit" 
-            disabled={isLoading || !searchTerm.trim()} 
-            className="h-12 px-6 bg-[#f59e0b] hover:bg-white text-black font-black text-xs uppercase tracking-widest rounded-2xl transition-colors disabled:opacity-50"
-          >
-            Buscar
-          </button>
-        </form>
-
-        {isLoading ? (
-          <div className="py-12 flex justify-center">
-            <Loader2 size={32} className="animate-spin text-[#f59e0b]" />
-          </div>
-        ) : users.length === 0 ? (
-          <div className="text-center py-12 text-white/50">
-            {searchTerm.trim() ? 'No se encontraron resultados' : 'Ingresa un nombre o celular para buscar'}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {users.map((u) => (
-              <div key={u.id} className="bg-white/5 border border-white/10 rounded-2xl p-5 flex flex-col justify-between hover:border-white/20 transition-all">
-                <div className="flex items-start gap-4 mb-4">
-                  <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center shrink-0">
-                    <User size={20} className="text-white/60" />
-                  </div>
-                  <div>
-                    <h3 className="text-white font-bold">{u.name}</h3>
-                    <p className="text-white/50 text-xs mt-1">{u.phone}</p>
-                    <p className="text-white/40 text-[10px] mt-0.5 truncate max-w-[180px]" title={u.email || `${u.phone}@barbershop.local`}>
-                      {u.email || `${u.phone}@barbershop.local`}
-                    </p>
-                    <span className="inline-block mt-2 text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-white/10 text-white/80">
-                      {u.role === 'barber' ? 'Barbero' : 'Cliente'}
-                    </span>
-                  </div>
+      <div className="bg-erp-surface border border-erp-border rounded-2xl shadow-sm overflow-hidden flex flex-col">
+         {/* BARRA DE BÚSQUEDA */}
+         <div className="p-6 border-b border-erp-border bg-erp-bg">
+            <form onSubmit={handleSearch} className="flex gap-4">
+              <div className="relative flex-1 group shadow-sm">
+                <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                  <Search size={18} className="text-erp-text-muted group-focus-within:text-erp-primary transition-colors" />
                 </div>
-
-                <button
-                  onClick={() => handleResetPassword(u.id, u.name)}
-                  disabled={resettingId === u.id}
-                  className="w-full h-10 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border border-red-500/20 transition-all disabled:opacity-50"
-                >
-                  {resettingId === u.id ? (
-                    <Loader2 size={14} className="animate-spin" />
-                  ) : (
-                    <>
-                      <KeyRound size={14} />
-                      Generar Clave &quot;123456&quot;
-                    </>
-                  )}
-                </button>
+                <input
+                  type="text"
+                  placeholder="Buscar por nombre, email o teléfono..."
+                  className="w-full bg-erp-surface border border-erp-border rounded-xl py-3.5 pl-12 pr-4 text-sm font-medium text-erp-text outline-none focus:border-erp-primary/50 transition-all"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
               </div>
-            ))}
-          </div>
-        )}
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="bg-erp-primary text-white px-8 rounded-xl text-xs font-black uppercase tracking-wider hover:opacity-90 transition-all shadow-sm flex items-center justify-center min-w-[120px]"
+              >
+                {isLoading ? <Loader2 size={18} className="animate-spin" /> : 'BUSCAR'}
+              </button>
+            </form>
+         </div>
+
+         {/* DATA GRID DE USUARIOS */}
+         {users.length === 0 && !isLoading ? (
+            <div className="py-20 flex flex-col items-center justify-center text-center opacity-60">
+              <User size={48} className="text-erp-text-muted mb-4" />
+              <p className="text-sm font-bold text-erp-text uppercase tracking-widest">No hay usuarios visibles</p>
+              <p className="text-xs text-erp-text-muted mt-2">Usa el buscador para encontrar cuentas</p>
+            </div>
+         ) : (
+            <div className="overflow-x-auto custom-scrollbar">
+               <table className="w-full text-left border-collapse">
+                  <thead>
+                     <tr className="bg-erp-bg border-b border-erp-border">
+                        <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-erp-text-muted whitespace-nowrap">Usuario</th>
+                        <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-erp-text-muted whitespace-nowrap">Contacto</th>
+                        <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-erp-text-muted whitespace-nowrap">Rol</th>
+                        <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-erp-text-muted text-right whitespace-nowrap">Acciones de Seguridad</th>
+                     </tr>
+                  </thead>
+                  <tbody className="divide-y divide-erp-border">
+                     {users.map((user) => (
+                        <tr key={user.id} className="group hover:bg-erp-bg transition-colors">
+                           <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center gap-4">
+                                 <div className="w-10 h-10 rounded-lg overflow-hidden border border-erp-border bg-erp-surface flex items-center justify-center shrink-0 text-erp-primary">
+                                    <User size={18} />
+                                 </div>
+                                 <p className="text-sm font-bold text-erp-text uppercase tracking-tight">{user.name}</p>
+                              </div>
+                           </td>
+                           <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex flex-col gap-1">
+                                 <span className="text-xs font-bold text-erp-text">{user.email}</span>
+                                 <span className="text-[10px] font-medium text-erp-text-muted uppercase tracking-wider">{user.phone || 'Sin teléfono'}</span>
+                              </div>
+                           </td>
+                           <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`inline-flex items-center justify-center px-2.5 py-1 rounded-md border text-[10px] font-black uppercase tracking-widest ${user.role === 'barber' ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-gray-100 border-gray-200 text-gray-600'}`}>
+                                 {user.role === 'barber' ? 'Barbero' : 'Cliente'}
+                              </span>
+                           </td>
+                           <td className="px-6 py-4 text-right whitespace-nowrap">
+                              <button
+                                 onClick={() => handleResetPassword(user.id, user.name)}
+                                 disabled={resettingId === user.id}
+                                 className="inline-flex items-center gap-2 bg-erp-surface border border-erp-border text-erp-text-muted px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-all disabled:opacity-50"
+                              >
+                                 {resettingId === user.id ? (
+                                    <><Loader2 size={14} className="animate-spin" /> Procesando</>
+                                 ) : (
+                                    <><KeyRound size={14} /> Resetear Clave</>
+                                 )}
+                              </button>
+                           </td>
+                        </tr>
+                     ))}
+                  </tbody>
+               </table>
+            </div>
+         )}
       </div>
     </div>
   );

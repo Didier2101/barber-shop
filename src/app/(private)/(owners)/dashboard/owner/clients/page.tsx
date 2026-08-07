@@ -5,14 +5,15 @@ import {
    Search,
    Phone,
    CalendarDays,
-   Activity,
    History,
-   Scissors,
-   ArrowRight,
-   Power,
+   ChevronRight,
    ChevronLeft,
-   ChevronRight
-} from 'lucide-react';
+   Check,
+   X,
+   Clock,
+   CheckCircle2,
+   XCircle
+, Activity } from 'lucide-react';
 import { useState } from 'react';
 import Image from 'next/image';
 import Swal from 'sweetalert2';
@@ -20,253 +21,321 @@ import { format } from 'date-fns';
 import { Appointment, Profile } from '@/types';
 import { toast } from 'sonner';
 import { formatPrice } from '@/lib/format';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function ClientsPage() {
    const [page, setPage] = useState(1);
    const [searchTerm, setSearchTerm] = useState('');
    const limit = 10;
 
-   // Hacemos el debounce del término de búsqueda manualmente o lo pasamos directo.
-   // Pasarlo directo causará peticiones en cada tipeo, pero React Query lo manejará bien.
    const { data: paginatedData, isLoading: clientsLoading } = useOwnerClientsPaginated(page, limit, searchTerm);
 
    const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
    const { data: clientDetails, isLoading: detailsLoading } = useClientDetails(selectedClientId);
 
    const { toggleClientStatus } = useOwnerMutations();
 
    const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
       setSearchTerm(e.target.value);
-      setPage(1); // Reset a pagina 1 cuando se busca
+      setPage(1);
+   };
+
+   const openClientDrawer = (id: string) => {
+      setSelectedClientId(id);
+      setIsDrawerOpen(true);
+   };
+
+   const handleToggleStatus = (id: string, currentStatus: boolean, name: string) => {
+      const action = currentStatus ? 'desactivar' : 'activar';
+      Swal.fire({
+         title: `¿Confirmas que deseas ${action} a ${name}?`,
+         text: currentStatus ? 'El cliente no podrá agendar citas pero su historial se mantendrá.' : 'El cliente volverá a estar activo en el sistema.',
+         icon: 'warning',
+         showCancelButton: true,
+         confirmButtonColor: 'var(--color-erp-primary)',
+         cancelButtonColor: '#ef4444',
+         confirmButtonText: 'Sí, confirmar',
+         cancelButtonText: 'Cancelar'
+      }).then(result => {
+         if (result.isConfirmed) {
+            toggleClientStatus.mutate(
+               { id, is_active: !currentStatus },
+               {
+                  onSuccess: () => {
+                     toast.success(`Cliente ${action}do exitosamente`);
+                     if (selectedClientId === id) {
+                        setIsDrawerOpen(false); // opcional: cerrar el drawer tras cambiar
+                     }
+                  }
+               }
+            );
+         }
+      });
    };
 
    return (
-      <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-8xl mx-auto pb-32">
-         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-            <div className="flex items-center gap-5">
-               <div className="p-4 bg-black border border-white/5 rounded-2xl shadow-xl text-brand">
-                  <User size={28} />
-               </div>
-               <div>
-                  <p className="text-brand text-[10px] font-bold uppercase tracking-[0.2em] mb-1">Base de Datos</p>
-                  <h2 className="text-3xl font-bold tracking-tight text-white uppercase">Clientes</h2>
-               </div>
+      <div className="space-y-6 max-w-7xl mx-auto pb-32 font-sans animate-in fade-in slide-in-from-bottom-4 duration-500">
+         
+         {/* HEADER ERP */}
+         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-erp-bg border border-erp-border p-6 rounded-2xl shadow-sm">
+            <div>
+               <h2 className="text-2xl font-black text-erp-text tracking-tight flex items-center gap-3">
+                  <User size={24} className="text-erp-primary" />
+                  Base de Datos de Clientes
+               </h2>
+               <p className="text-sm font-medium text-erp-text-muted mt-1">Directorio de clientes y su historial</p>
             </div>
-
-            <div className="relative group shadow-xl w-full md:w-96">
-               <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
-                  <Search size={16} className="text-white/40 group-focus-within:text-brand transition-colors" />
+            
+            <div className="relative group shadow-sm w-full sm:w-96">
+               <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                  <Search size={16} className="text-erp-text-muted group-focus-within:text-erp-primary transition-colors" />
                </div>
                <input
                   type="text"
-                  placeholder="Buscar cliente..."
-                  className="w-full bg-black border border-white/5 rounded-2xl py-4 pl-12 pr-4 text-sm text-white outline-none focus:border-brand transition-all"
+                  placeholder="Buscar cliente por nombre..."
+                  className="w-full bg-erp-surface border border-erp-border rounded-xl py-2.5 pl-11 pr-4 text-sm text-erp-text outline-none focus:border-erp-primary/50 transition-all"
                   value={searchTerm}
                   onChange={handleSearch}
                />
             </div>
          </div>
 
-         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            {/* Client List (Sidebar) */}
-            <div className="lg:col-span-6 space-y-6">
-
-               <div className="bg-black border border-white/5 rounded-2xl overflow-hidden shadow-xl flex flex-col h-[65vh]">
-                  {clientsLoading ? (
-                     <div className="flex-1 flex items-center justify-center">
-                        <div className="w-6 h-6 border-2 border-brand/20 border-t-brand rounded-full animate-spin"></div>
-                     </div>
-                  ) : (paginatedData?.clients.length === 0) ? (
-                     <div className="flex-1 p-16 flex items-center justify-center text-center opacity-40">
-                        <p className="text-xs font-medium text-white uppercase tracking-wider">Sin resultados</p>
-                     </div>
-                  ) : (
-                     <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col">
-                        {paginatedData?.clients.map((client: Profile) => (
-                           <button
-                              key={client.id}
-                              onClick={() => setSelectedClientId(client.id)}
-                              className={`
-                                w-full p-4 flex items-center gap-4 transition-all text-left relative z-10 border-b border-white/5 last:border-0
-                                ${selectedClientId === client.id ? 'bg-brand/10 text-brand' : 'hover:bg-white/5 text-white/80'}
-                                ${!client.is_active ? 'opacity-50 grayscale' : ''}
-                              `}
-                           >
-                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden shrink-0 border ${selectedClientId === client.id ? 'bg-bg-base border-brand/20' : 'bg-bg-base border-white/5'}`}>
-                                 {client.avatar_url ? <Image src={client.avatar_url} alt={`Avatar de ${client.name}`} width={40} height={40} className="w-full h-full object-cover" /> : <User size={18} className={selectedClientId === client.id ? 'text-brand' : 'text-white/20'} />}
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                 <p className={`text-sm font-bold uppercase truncate mb-0.5 ${selectedClientId === client.id ? 'text-brand' : 'text-white'}`}>
-                                    {client.name}
-                                 </p>
-                                 <p className={`text-[10px] font-medium tracking-widest uppercase ${selectedClientId === client.id ? 'text-brand/60' : 'text-white/40'}`}>
-                                    {!client.is_active ? 'INACTIVO' : 'ACTIVO'}
-                                 </p>
-                              </div>
-                              {selectedClientId === client.id && <ArrowRight size={16} className="text-brand" />}
-                           </button>
-                        ))}
-                     </div>
-                  )}
-
-                  {/* Paginación */}
-                  <div className="p-4 border-t border-white/5 flex items-center justify-between bg-bg-base">
-                     <button
-                        disabled={page === 1}
-                        onClick={() => setPage(p => p - 1)}
-                        className="p-2 text-white/40 hover:text-white disabled:opacity-20 transition-all"
-                     >
-                        <ChevronLeft size={20} />
-                     </button>
-                     <span className="text-[10px] font-medium text-white/40 uppercase tracking-widest">
-                        Página {page} de {paginatedData?.totalPages || 1}
-                     </span>
-                     <button
-                        disabled={page === (paginatedData?.totalPages || 1) || paginatedData?.totalPages === 0}
-                        onClick={() => setPage(p => p + 1)}
-                        className="p-2 text-white/40 hover:text-white disabled:opacity-20 transition-all"
-                     >
-                        <ChevronRight size={20} />
-                     </button>
-                  </div>
+         {/* DATA GRID (TABLA) */}
+         <div className="bg-erp-surface border border-erp-border rounded-2xl shadow-sm overflow-hidden flex flex-col h-[65vh]">
+            {clientsLoading ? (
+               <div className="flex-1 flex items-center justify-center">
+                  <div className="w-8 h-8 border-4 border-erp-primary/20 border-t-erp-primary rounded-full animate-spin"></div>
                </div>
-            </div>
-
-            {/* Client Details */}
-            <div className="lg:col-span-6">
-               {selectedClientId ? (
-                  detailsLoading ? (
-                     <div className="flex items-center justify-center h-full min-h-[40vh]">
-                        <div className="w-8 h-8 border-4 border-brand/20 border-t-brand rounded-full animate-spin"></div>
-                     </div>
-                  ) : (
-                     <div className="animate-in fade-in slide-in-from-right-4 duration-500 space-y-6">
-                        {/* Header Perfil */}
-                        <div className="bg-black border border-white/5 rounded-2xl p-8 shadow-xl flex flex-col md:flex-row items-center gap-8 relative overflow-hidden">
-                           <div className="w-32 h-32 rounded-full bg-bg-base border-4 border-surface ring-2 ring-brand/20 overflow-hidden shadow-2xl z-10 shrink-0">
-                              {clientDetails?.profile.avatar_url ? <Image src={clientDetails.profile.avatar_url} alt={`Avatar de ${clientDetails?.profile.name}`} width={128} height={128} className="w-full h-full object-cover" /> : <User size={40} className="w-full h-full p-8 text-white/20" />}
-                           </div>
-                           <div className="text-center md:text-left z-10 flex-1">
-                              <div className="mb-4">
-                                 <h3 className="text-2xl font-bold text-white uppercase tracking-tight mb-2 flex items-center gap-3">
-                                    {clientDetails?.profile.name}
-                                    {!clientDetails?.profile.is_active && (
-                                       <span className="text-[10px] text-red-500 border border-red-500/20 bg-red-500/10 px-2 py-1 rounded">INACTIVO</span>
-                                    )}
-                                 </h3>
-                                 <span className="text-[9px] font-bold text-brand bg-brand/10 border border-brand/20 px-3 py-1 rounded uppercase tracking-widest">
-                                    Cliente Registrado
-                                 </span>
-                              </div>
-                              <div className="flex flex-wrap justify-center md:justify-start gap-6">
-                                 <div className="flex items-center gap-2 text-white/60">
-                                    <Phone size={14} className="text-brand" />
-                                    <span className="text-[10px] font-bold uppercase tracking-widest">{clientDetails?.profile.phone || 'N/A'}</span>
-                                 </div>
-                                 <div className="flex items-center gap-2 text-white/60">
-                                    <CalendarDays size={14} className="text-brand" />
-                                    <span className="text-[10px] font-medium uppercase tracking-wider">Registrado el {format(new Date(clientDetails?.profile.created_at || Date.now()), 'dd MMM yyyy')}</span>
-                                 </div>
-                              </div>
-                           </div>
-                           <div className="md:ml-auto z-10">
-                              <button
-                                 onClick={() => {
-                                    const isActivating = !clientDetails?.profile.is_active;
-                                    Swal.fire({
-                                       title: isActivating ? '¿ACTIVAR CLIENTE?' : '¿DESACTIVAR CLIENTE?',
-                                       text: isActivating ? 'El cliente volverá a estar activo en el sistema.' : 'El cliente no podrá agendar citas pero su historial se mantendrá.',
-                                       icon: 'warning',
-                                       showCancelButton: true,
-                                       confirmButtonColor: isActivating ? '#10b981' : '#ef4444',
-                                       confirmButtonText: isActivating ? 'SÍ, ACTIVAR' : 'SÍ, DESACTIVAR',
-                                       cancelButtonText: 'CANCELAR',
-                                       background: '#111111',
-                                       color: '#fff'
-                                    }).then(result => {
-                                       if (result.isConfirmed) {
-                                          toggleClientStatus.mutate(
-                                             { id: clientDetails!.profile.id, is_active: isActivating },
-                                             {
-                                                onSuccess: () => {
-                                                   toast.success(isActivating ? 'Cliente activado' : 'Cliente desactivado');
-                                                }
-                                             }
-                                          );
-                                       }
-                                    });
-                                 }}
-                                 className={`p-4 rounded-xl border transition-all shadow-xl active:scale-90 ${clientDetails?.profile.is_active ? 'bg-bg-base text-red-500 border-white/5 hover:bg-red-500/10 hover:border-red-500/20' : 'bg-bg-base text-emerald-500 border-white/5 hover:bg-emerald-500/10 hover:border-emerald-500/20'}`}
-                                 title={clientDetails?.profile.is_active ? 'Desactivar cliente' : 'Activar cliente'}
-                              >
-                                 <Power size={18} />
-                              </button>
-                           </div>
-                           <Activity size={200} className="absolute -bottom-16 -right-16 opacity-5 text-brand" />
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                           {/* Historial */}
-                           <div className="bg-black border border-white/5 rounded-2xl p-8 shadow-xl flex flex-col h-full">
-                              <div className="flex items-center gap-3 mb-6">
-                                 <div className="p-2.5 bg-brand/10 border border-brand/20 text-brand rounded-xl">
-                                    <History size={18} />
-                                 </div>
-                                 <h4 className="text-[11px] font-bold text-white uppercase tracking-widest">Últimos Servicios</h4>
-                              </div>
-                              <div className="flex flex-col gap-2 flex-1">
-                                 {(clientDetails?.appointments || []).length === 0 ? (
-                                    <div className="py-12 text-center opacity-40">
-                                       <p className="text-[10px] font-medium uppercase tracking-wider">Sin actividad previa</p>
+            ) : paginatedData?.clients.length === 0 ? (
+               <div className="flex-1 flex flex-col items-center justify-center text-center opacity-60">
+                  <User size={48} className="text-erp-text-muted mb-4" />
+                  <p className="text-sm font-bold text-erp-text uppercase tracking-widest">Sin resultados</p>
+               </div>
+            ) : (
+               <div className="flex-1 overflow-x-auto custom-scrollbar">
+                  <table className="w-full text-left border-collapse">
+                     <thead>
+                        <tr className="bg-erp-bg border-b border-erp-border">
+                           <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-erp-text-muted whitespace-nowrap">Cliente</th>
+                           <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-erp-text-muted whitespace-nowrap">Contacto</th>
+                           <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-erp-text-muted text-center whitespace-nowrap">Estado</th>
+                           <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-erp-text-muted whitespace-nowrap">Registro</th>
+                           <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-erp-text-muted text-right whitespace-nowrap">Acciones</th>
+                        </tr>
+                     </thead>
+                     <tbody className="divide-y divide-erp-border">
+                        {paginatedData?.clients.map((client: Profile) => (
+                           <tr
+                              key={client.id}
+                              onClick={() => openClientDrawer(client.id)}
+                              className="cursor-pointer group bg-erp-bg"
+                           >
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                 <div className="flex items-center gap-4">
+                                    <div className={`w-10 h-10 rounded-lg overflow-hidden border border-erp-border bg-erp-surface flex items-center justify-center shrink-0 ${!client.is_active ? 'opacity-50 grayscale' : ''}`}>
+                                       {client.avatar_url ? (
+                                          <Image src={client.avatar_url} alt={client.name} width={40} height={40} className="w-full h-full object-cover" />
+                                       ) : (
+                                          <User size={18} className="text-erp-text-muted" />
+                                       )}
                                     </div>
-                                 ) : (
-                                    (clientDetails?.appointments || []).slice(0, 5).map((apt: Appointment & { service: { name: string } }) => (
-                                       <div
-                                          key={apt.id}
-                                          className="flex justify-between items-center p-4 bg-bg-base border border-white/5 rounded-xl transition-all hover:border-white/10"
-                                       >
-                                          <div>
-                                             <p className="text-sm font-bold text-white uppercase tracking-tight mb-1">{apt.service?.name || 'Servicio'}</p>
-                                             <p className="text-[9px] text-white/40 font-medium uppercase tracking-wider">{format(new Date(apt.start_time), 'dd MMM, yyyy')}</p>
-                                          </div>
-                                          <div className="text-right">
-                                             <p className="text-sm font-bold text-white tracking-tight leading-none">{formatPrice(apt.price)}</p>
-                                          </div>
-                                       </div>
-                                    ))
-                                 )}
-                              </div>
-                           </div>
+                                    <div className={!client.is_active ? 'opacity-50' : ''}>
+                                       <p className="text-sm font-bold text-erp-text capitalize">{client.name}</p>
+                                       <p className="text-xs font-medium text-erp-text-muted">ID: {client.id.substring(0, 8)}</p>
+                                    </div>
+                                 </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                 <div className={`flex items-center gap-2 text-xs font-medium text-erp-text ${!client.is_active ? 'opacity-50' : ''}`}>
+                                    <Phone size={12} className="text-erp-text-muted" /> {client.phone || 'N/A'}
+                                 </div>
+                              </td>
+                              <td className="px-6 py-4 text-center whitespace-nowrap">
+                                 <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest border
+                                    ${client.is_active ? 'text-emerald-600 bg-emerald-500/10 border-emerald-500/20' : 'text-red-600 bg-red-500/10 border-red-500/20'}
+                                 `}>
+                                    {client.is_active ? 'Activo' : 'Inactivo'}
+                                 </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-xs font-medium text-erp-text">
+                                 {format(new Date(client.created_at || Date.now()), 'dd MMM yyyy')}
+                              </td>
+                              <td className="px-6 py-4 text-right whitespace-nowrap">
+                                 <div className="flex items-center justify-end gap-2">
+                                    <button 
+                                       onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleToggleStatus(client.id, !!client.is_active, client.name);
+                                       }}
+                                       className={`p-2 rounded-lg border transition-all ${client.is_active ? 'hover:bg-red-500/10 hover:text-red-600 hover:border-red-500/30 border-erp-border text-erp-text-muted' : 'hover:bg-emerald-500/10 hover:text-emerald-600 hover:border-emerald-500/30 border-erp-border text-erp-text-muted'}`}
+                                       title={client.is_active ? 'Desactivar' : 'Activar'}
+                                    >
+                                       {client.is_active ? <X size={16} /> : <Check size={16} />}
+                                    </button>
+                                    <button className="p-2 rounded-lg border border-erp-border text-erp-text-muted transition-all">
+                                       <ChevronRight size={16} />
+                                    </button>
+                                 </div>
+                              </td>
+                           </tr>
+                        ))}
+                     </tbody>
+                  </table>
+               </div>
+            )}
 
-                           {/* Estadísticas */}
-                           <div className="bg-black border border-white/5 rounded-2xl p-8 shadow-xl flex flex-col justify-center text-center space-y-8 relative overflow-hidden">
-                              <div className="p-5 bg-brand/10 border border-brand/20 text-brand rounded-full w-fit mx-auto relative z-10">
-                                 <Scissors size={28} />
-                              </div>
-                              <div className="relative z-10">
-                                 <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-2">Total de Visitas</p>
-                                 <p className="text-5xl font-bold text-white tracking-tighter leading-none">{(clientDetails?.appointments || []).length}</p>
-                              </div>
-                              <div className="pt-8 border-t border-white/5 relative z-10">
-                                 <p className="text-[10px] font-bold text-brand uppercase tracking-widest mb-2">Volumen de Compra</p>
-                                 <p className="text-2xl font-bold text-white tracking-tighter leading-none">{formatPrice((clientDetails?.appointments || []).reduce((s: number, a: Appointment) => s + a.price, 0))}</p>
-                              </div>
-                              <Scissors size={150} className="absolute -bottom-10 -left-10 opacity-5 text-brand -rotate-12" />
-                           </div>
-                        </div>
-                     </div>
-                  )
-               ) : (
-                  <div className="h-full min-h-[60vh] border border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center text-center p-12 opacity-60">
-                     <div className="p-6 bg-black border border-white/10 rounded-2xl mb-6">
-                        <User size={40} className="text-white/20" />
-                     </div>
-                     <h4 className="text-lg font-bold text-white uppercase tracking-wider mb-2">Selección de Perfil</h4>
-                     <p className="text-xs text-white/40 font-medium uppercase tracking-wider max-w-xs leading-relaxed">Selecciona un cliente del directorio para ver su actividad y estadísticas.</p>
-                  </div>
-               )}
+            {/* Paginación */}
+            <div className="p-4 border-t border-erp-border flex items-center justify-between bg-erp-bg mt-auto shrink-0">
+               <button
+                  disabled={page === 1}
+                  onClick={() => setPage(p => p - 1)}
+                  className="px-4 py-2 bg-erp-surface border border-erp-border rounded-lg text-erp-text-muted hover:text-erp-text hover:border-erp-primary/30 disabled:opacity-30 transition-all text-xs font-bold uppercase tracking-widest flex items-center gap-2"
+               >
+                  <ChevronLeft size={14} /> Anterior
+               </button>
+               <span className="text-xs font-bold text-erp-text-muted uppercase tracking-widest">
+                  Página {page} de {paginatedData?.totalPages || 1}
+               </span>
+               <button
+                  disabled={page === (paginatedData?.totalPages || 1) || paginatedData?.totalPages === 0}
+                  onClick={() => setPage(p => p + 1)}
+                  className="px-4 py-2 bg-erp-surface border border-erp-border rounded-lg text-erp-text-muted hover:text-erp-text hover:border-erp-primary/30 disabled:opacity-30 transition-all text-xs font-bold uppercase tracking-widest flex items-center gap-2"
+               >
+                  Siguiente <ChevronRight size={14} />
+               </button>
             </div>
          </div>
+
+         {/* RIGHT DRAWER (PANEL LATERAL) */}
+         <AnimatePresence>
+            {isDrawerOpen && (
+               <>
+                  <motion.div
+                     initial={{ opacity: 0 }}
+                     animate={{ opacity: 1 }}
+                     exit={{ opacity: 0 }}
+                     onClick={() => setIsDrawerOpen(false)}
+                     className="fixed inset-0 bg-transparent z-[200]"
+                  />
+
+                  <motion.div
+                     initial={{ x: '100%' }}
+                     animate={{ x: 0 }}
+                     exit={{ x: '100%' }}
+                     transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                     className="fixed top-0 right-0 w-full sm:w-[450px] h-full bg-erp-bg border-l border-erp-border shadow-2xl z-[210] flex flex-col"
+                  >
+                     <div className="flex items-center justify-between p-6 border-b border-erp-border bg-erp-surface">
+                        <h3 className="text-lg font-black uppercase tracking-tight text-erp-text">
+                           Ficha del Cliente
+                        </h3>
+                        <button onClick={() => setIsDrawerOpen(false)} className="p-2 text-erp-text-muted hover:text-erp-text hover:bg-black/5 rounded-full transition-all">
+                           <X size={20} />
+                        </button>
+                     </div>
+
+                     <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
+                        {detailsLoading ? (
+                           <div className="flex justify-center py-20">
+                              <div className="w-8 h-8 border-4 border-erp-primary/20 border-t-erp-primary rounded-full animate-spin"></div>
+                           </div>
+                        ) : clientDetails ? (
+                           <>
+                              {/* Header Perfil */}
+                              <div className="flex flex-col items-center text-center">
+                                 <div className="w-24 h-24 rounded-2xl bg-erp-surface border border-erp-border overflow-hidden mb-4 shadow-sm">
+                                    {clientDetails.profile.avatar_url ? (
+                                       <Image src={clientDetails.profile.avatar_url} alt={clientDetails.profile.name} width={96} height={96} className="w-full h-full object-cover" />
+                                    ) : (
+                                       <User size={40} className="w-full h-full p-6 text-erp-text-muted" />
+                                    )}
+                                 </div>
+                                 <h4 className="text-xl font-bold text-erp-text uppercase">{clientDetails.profile.name}</h4>
+                                 <p className="text-xs font-bold text-erp-primary bg-erp-primary/10 px-2 py-1 rounded mt-2 uppercase tracking-widest">
+                                    Cliente Registrado
+                                 </p>
+                              </div>
+
+                              {/* Info de contacto */}
+                              <div className="bg-erp-surface border border-erp-border rounded-xl p-4 space-y-3">
+                                 <div className="flex items-center gap-3">
+                                    <Phone size={14} className="text-erp-text-muted" />
+                                    <span className="text-xs font-bold text-erp-text">{clientDetails.profile.phone || 'Sin teléfono'}</span>
+                                 </div>
+                                 <div className="flex items-center gap-3">
+                                    <CalendarDays size={14} className="text-erp-text-muted" />
+                                    <span className="text-xs font-medium text-erp-text">Registrado el {format(new Date(clientDetails.profile.created_at || Date.now()), 'dd MMM yyyy')}</span>
+                                 </div>
+                              </div>
+
+                              {/* KPIs rápidos */}
+                              <div className="grid grid-cols-2 gap-4">
+                                 <div className="bg-erp-surface border border-erp-border rounded-xl p-4 text-center">
+                                    <p className="text-[10px] font-bold text-erp-text-muted uppercase tracking-widest mb-1">Citas Totales</p>
+                                    <p className="text-2xl font-black text-erp-text">{(clientDetails.appointments || []).length}</p>
+                                 </div>
+                                 <div className="bg-erp-surface border border-erp-border rounded-xl p-4 text-center">
+                                    <p className="text-[10px] font-bold text-erp-text-muted uppercase tracking-widest mb-1">Estado</p>
+                                    <p className={`text-sm font-black mt-1 ${clientDetails.profile.is_active ? 'text-emerald-600' : 'text-red-500'}`}>
+                                       {clientDetails.profile.is_active ? 'ACTIVO' : 'INACTIVO'}
+                                    </p>
+                                 </div>
+                              </div>
+
+                              {/* Últimos servicios */}
+                              <div>
+                                 <div className="flex items-center gap-2 mb-4">
+                                    <History size={16} className="text-erp-primary" />
+                                    <h4 className="text-xs font-bold text-erp-text uppercase tracking-widest">Últimos Servicios</h4>
+                                 </div>
+                                 <div className="space-y-3">
+                                    {(clientDetails.appointments || []).length === 0 ? (
+                                       <div className="text-center py-6 border border-dashed border-erp-border rounded-xl">
+                                          <p className="text-[10px] font-medium text-erp-text-muted uppercase tracking-wider">Sin actividad previa</p>
+                                       </div>
+                                    ) : (
+                                       (clientDetails.appointments || []).map((apt: Appointment) => (
+                                          <div key={apt.id} className="flex flex-col p-3 bg-erp-surface border border-erp-border rounded-xl">
+                                             <div className="flex justify-between items-start mb-2">
+                                                <div>
+                                                   <p className="text-xs font-bold text-erp-text uppercase tracking-tight mb-0.5">
+                                                      {Array.isArray(apt.services_data) ? apt.services_data.map(s => s.name).join(', ') : 'Servicio'}
+                                                   </p>
+                                                   <p className="text-[10px] text-erp-text-muted font-medium">{format(new Date(apt.start_time), 'dd MMM yyyy - HH:mm')}</p>
+                                                </div>
+                                                <p className="text-xs font-black text-erp-text">{formatPrice(apt.price)}</p>
+                                             </div>
+                                             
+                                             <div className="flex justify-start">
+                                                <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest border
+                                                   ${apt.status === 'completed' ? 'text-emerald-600 bg-emerald-500/10 border-emerald-500/20' : 
+                                                     apt.status === 'cancelled' ? 'text-red-500 bg-red-500/10 border-red-500/20' : 
+                                                     apt.status === 'occupied' ? 'text-blue-600 bg-blue-500/10 border-blue-500/20' : 
+                                                     'text-amber-500 bg-amber-500/10 border-amber-500/20'}
+                                                `}>
+                                                   {apt.status === 'completed' ? <CheckCircle2 size={10} /> : 
+                                                    apt.status === 'cancelled' ? <XCircle size={10} /> : 
+                                                    apt.status === 'occupied' ? <Activity size={10} className="animate-pulse" /> : 
+                                                    <Clock size={10} />}
+                                                   
+                                                   {apt.status === 'completed' ? 'Finalizada' : 
+                                                    apt.status === 'cancelled' ? 'Cancelada' : 
+                                                    apt.status === 'occupied' ? 'En Curso' : 'Pendiente / Agendada'}
+                                                </span>
+                                             </div>
+                                          </div>
+                                       ))
+                                    )}
+                                 </div>
+                              </div>
+                           </>
+                        ) : null}
+                     </div>
+                  </motion.div>
+               </>
+            )}
+         </AnimatePresence>
       </div>
    );
 }

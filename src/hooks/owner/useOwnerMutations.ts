@@ -18,6 +18,16 @@ export function useOwnerMutations() {
     }
   });
 
+  const toggleServiceStatus = useMutation({
+    mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
+      const { error } = await supabase.from('services').update({ is_active }).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['owner-base-data'] });
+    }
+  });
+
   const createService = useMutation({
     mutationFn: async (service: { name: string; price: number; duration: number }) => {
       const { error } = await supabase.from('services').insert([service]);
@@ -261,6 +271,7 @@ export function useOwnerMutations() {
     createService,
     updateService,
     deleteService,
+    toggleServiceStatus,
     createExpense,
     updateExpense,
     deleteExpense,

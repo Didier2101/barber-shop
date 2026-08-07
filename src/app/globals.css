@@ -7,6 +7,15 @@
   --color-surface-hover: var(--surface-hover);
   --color-accent-green: var(--color-accent-green);
   --color-accent-pink: var(--color-accent-pink);
+
+  /* ERP Variables */
+  --color-erp-bg: var(--erp-bg);
+  --color-erp-surface: var(--erp-surface);
+  --color-erp-surface-hover: var(--erp-surface-hover);
+  --color-erp-border: var(--erp-border);
+  --color-erp-text: var(--erp-text);
+  --color-erp-text-muted: var(--erp-text-muted);
+  --color-erp-primary: var(--erp-primary);
 }
 
 :root {
@@ -19,6 +28,15 @@
   --bg-base: var(--color-bg-lightest);
   --surface: var(--color-bg-surface);
   --surface-hover: #f1e4ce;
+
+  /* ERP Variables */
+  --erp-bg: #ffffff;
+  --erp-surface: #f3f4f6;
+  --erp-surface-hover: #e5e7eb;
+  --erp-border: #e5e7eb;
+  --erp-text: #111827;
+  --erp-text-muted: #6b7280;
+  --erp-primary: #0f172a;
 }
 
 @keyframes marquee {

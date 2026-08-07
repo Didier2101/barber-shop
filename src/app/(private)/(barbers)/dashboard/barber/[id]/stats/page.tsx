@@ -34,7 +34,7 @@ export default function BarberStatsPage() {
    if (isLoading) {
       return (
          <div className="flex items-center justify-center min-h-[60vh]">
-            <div className="w-8 h-8 border-4 border-[#f59e0b] border-t-transparent rounded-full animate-spin"></div>
+            <div className="w-8 h-8 border-4 border-brand/20 border-t-brand rounded-full animate-spin"></div>
          </div>
       );
    }
@@ -60,23 +60,23 @@ export default function BarberStatsPage() {
       <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-6xl mx-auto">
          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
             <div className="space-y-1">
-               <p className="text-[#f59e0b] text-[8px] md:text-[10px] font-black uppercase tracking-[0.4em]">Finanzas y Rendimiento</p>
-               <h1 className="text-2xl md:text-4xl font-black uppercase tracking-tighter italic leading-none text-white">Mi Billetera</h1>
+               <p className="text-brand text-[8px] md:text-[10px] font-black uppercase tracking-[0.4em]">Finanzas y Rendimiento</p>
+               <h1 className="text-2xl md:text-4xl font-black uppercase tracking-tighter italic leading-none text-zinc-900">Mi Billetera</h1>
             </div>
             
-            <div className="flex flex-wrap items-center gap-2 bg-white/5 p-1.5 rounded-2xl border border-white/5 backdrop-blur-xl">
+            <div className="flex flex-wrap items-center gap-2">
                {(['today', 'week', 'month', 'year'] as const).map(f => (
                  <button
                    key={f}
                    onClick={() => { setTimeFilter(f); setRange(undefined); }}
-                   className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all rounded-xl ${timeFilter === f ? 'bg-[#f59e0b] text-black shadow-lg' : 'text-white/40 hover:text-white'}`}
+                   className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all rounded-xl border ${timeFilter === f ? 'bg-brand/10 border-brand/30 text-brand' : 'border-accent-green/20 text-zinc-400 hover:text-zinc-900'}`}
                  >
                    {f === 'today' ? 'Hoy' : f === 'week' ? 'Semana' : f === 'month' ? 'Mes' : 'Año'}
                  </button>
                ))}
                <button
                   onClick={() => setShowCalendar(true)}
-                  className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all rounded-xl flex items-center gap-2 ${timeFilter === 'custom' ? 'bg-[#f59e0b] text-black shadow-lg' : 'text-white/40 hover:text-white'}`}
+                  className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all rounded-xl flex items-center gap-2 border ${timeFilter === 'custom' ? 'bg-brand/10 border-brand/30 text-brand' : 'border-accent-green/20 text-zinc-400 hover:text-zinc-900'}`}
                >
                   <Calendar size={14} />
                   {timeFilter === 'custom' && range?.from ? `${format(range.from, 'dd MMM')}` : 'Filtro'}
@@ -84,100 +84,94 @@ export default function BarberStatsPage() {
             </div>
          </div>
 
-         <div className="flex flex-col -space-y-px">
+         <div className="flex flex-col border-t border-accent-green/20 mt-6 pt-4">
             <motion.div
                initial={{ opacity: 0, y: 15 }}
                animate={{ opacity: 1, y: 0 }}
                transition={{ delay: 0.1 }}
-               className="bg-black/80 border border-white/10 backdrop-blur-2xl rounded-t-2xl p-4 md:p-5 relative overflow-hidden group"
+               className="border-b border-accent-green/20 py-6 relative group flex items-center justify-between"
             >
-               <p className="text-[8px] font-black uppercase tracking-widest text-white/30 mb-1">Total Bruto</p>
-               <p className="text-xl md:text-2xl font-black italic text-white tracking-tighter leading-none">{formatPrice(currentStats.income)}</p>
-               <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between">
-                  <span className="text-[7px] font-black uppercase tracking-widest text-[#f59e0b]">{currentStats.serviceCount} Servicios</span>
+               <div>
+                  <p className="text-[8px] font-black uppercase tracking-widest text-zinc-500 mb-1">Total Bruto</p>
+                  <p className="text-xl md:text-2xl font-black italic text-zinc-900 tracking-tighter leading-none">{formatPrice(currentStats.income)}</p>
                </div>
+               <span className="text-[9px] font-black uppercase tracking-widest text-brand px-4 py-2 border border-brand/20 bg-brand/5 rounded-xl">{currentStats.serviceCount} Servicios</span>
             </motion.div>
 
             <motion.div
                initial={{ opacity: 0, y: 15 }}
                animate={{ opacity: 1, y: 0 }}
                transition={{ delay: 0.2 }}
-               className="bg-black/80 border border-white/10 backdrop-blur-2xl p-4 md:p-5 relative overflow-hidden group"
+               className="border-b border-accent-green/20 py-6 relative group"
             >
                <p className="text-[8px] font-black uppercase tracking-widest text-emerald-500 mb-1">Mi Ganancia ({commission}%)</p>
-               <p className="text-xl md:text-2xl font-black italic text-white tracking-tighter leading-none">{formatPrice(currentStats.barberEarnings)}</p>
+               <p className="text-xl md:text-2xl font-black italic text-zinc-900 tracking-tighter leading-none">{formatPrice(currentStats.barberEarnings)}</p>
             </motion.div>
 
             <motion.div
                initial={{ opacity: 0, y: 15 }}
                animate={{ opacity: 1, y: 0 }}
                transition={{ delay: 0.3 }}
-               className="bg-black/80 border border-white/10 backdrop-blur-2xl rounded-b-2xl p-4 md:p-5 relative overflow-hidden group"
+               className="border-b border-accent-green/20 py-6 relative group"
             >
                <p className="text-[8px] font-black uppercase tracking-widest text-amber-500 mb-1">Aporte Local</p>
-               <p className="text-xl md:text-2xl font-black italic text-white tracking-tighter leading-none">{formatPrice(currentStats.shopEarnings)}</p>
+               <p className="text-xl md:text-2xl font-black italic text-zinc-900 tracking-tighter leading-none">{formatPrice(currentStats.shopEarnings)}</p>
             </motion.div>
          </div>
 
          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
             {/* SECCION DE COBROS PENDIENTES */}
             <div className="space-y-8">
-               <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white/30 px-2 flex items-center gap-3">
+               <h3 className="text-sm font-black uppercase tracking-[0.2em] text-zinc-400 px-2 flex items-center gap-3">
                   <Clock size={16} /> Estado de Pagos
                </h3>
-               <div className="flex flex-col -space-y-px">
+               <div className="flex flex-col border-t border-accent-green/20 mt-4">
                   <motion.div
                      initial={{ opacity: 0, x: -20 }}
                      whileInView={{ opacity: 1, x: 0 }}
-                     className="bg-black/80 border border-white/10 backdrop-blur-2xl rounded-t-2xl p-4 md:p-5 space-y-2"
+                     className="border-b border-accent-green/20 py-6 space-y-2"
                   >
-                     <p className="text-[8px] font-black uppercase tracking-widest text-[#f59e0b]">Por Cobrar</p>
-                     <p className="text-xl md:text-2xl font-black italic text-white tracking-tighter leading-none">{formatPrice(myPendingEarnings)}</p>
-                     <div className="h-px bg-white/5 w-full mt-2" />
-                     <p className="text-[7px] font-black text-white/30 uppercase tracking-widest">{pendingApps.length} servicios pendientes</p>
+                     <p className="text-[8px] font-black uppercase tracking-widest text-brand">Por Cobrar</p>
+                     <p className="text-xl md:text-2xl font-black italic text-zinc-900 tracking-tighter leading-none">{formatPrice(myPendingEarnings)}</p>
+                     <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest pt-2">{pendingApps.length} servicios pendientes</p>
                   </motion.div>
                   <motion.div
                      initial={{ opacity: 0, x: 20 }}
                      whileInView={{ opacity: 1, x: 0 }}
-                     className="bg-black/80 border border-white/10 backdrop-blur-2xl rounded-b-2xl p-4 md:p-5 space-y-2"
+                     className="border-b border-accent-green/20 py-6 space-y-2"
                   >
                      <p className="text-[8px] font-black uppercase tracking-widest text-emerald-500">Ya Recibido</p>
-                     <p className="text-xl md:text-2xl font-black italic text-white tracking-tighter leading-none">{formatPrice(myAlreadySettledEarnings)}</p>
-                     <div className="h-px bg-white/5 w-full mt-2" />
-                     <p className="text-[7px] font-black text-white/30 uppercase tracking-widest">Liquidado</p>
+                     <p className="text-xl md:text-2xl font-black italic text-zinc-900 tracking-tighter leading-none">{formatPrice(myAlreadySettledEarnings)}</p>
+                     <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest pt-2">Liquidado</p>
                   </motion.div>
                </div>
 
-               <div className="bg-black/80 border border-white/10 backdrop-blur-2xl rounded-2xl p-4 md:p-5 space-y-4">
-                  <div className="flex justify-between items-center pb-2 border-b border-white/5">
-                     <h4 className="text-[8px] font-black uppercase tracking-widest text-white/30 italic">Últimos Servicios Cobrados</h4>
-                     <div className="w-1.5 h-1.5 rounded-full bg-[#f59e0b] animate-pulse" />
+               <div className="pt-8">
+                  <div className="flex justify-between items-center pb-4 border-b border-accent-green/20">
+                     <h4 className="text-[9px] font-black uppercase tracking-widest text-zinc-400 italic">Últimos Servicios Cobrados</h4>
+                     <div className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse" />
                   </div>
-                  <div className="flex flex-col -space-y-px">
+                  <div className="flex flex-col border-t border-accent-green/20">
                      {pendingApps.length === 0 ? (
-                        <p className="text-[8px] text-white/10 font-black uppercase py-8 italic text-center tracking-[0.3em] bg-black/40 rounded-2xl border border-white/5">Todo Liquidado</p>
+                        <p className="text-[9px] text-zinc-400 font-black uppercase py-10 italic text-center tracking-[0.3em] border-b border-accent-green/20">Todo Liquidado</p>
                      ) : (
-                        pendingApps.slice(0, 10).map((apt, idx, arr) => (
+                        pendingApps.slice(0, 10).map((apt) => (
                            <div
                               key={apt.id}
-                              className={`
-                          bg-black/80 border border-white/10 p-3 flex justify-between items-center group hover:bg-white/[0.02] transition-all relative z-10 hover:z-20
-                          ${idx === 0 ? 'rounded-t-2xl' : ''}
-                          ${idx === arr.length - 1 ? 'rounded-b-2xl' : ''}
-                        `}
+                              className="border-b border-accent-green/20 py-5 flex justify-between items-center group hover:bg-brand/5 transition-all relative z-10"
                            >
-                              <div className="flex items-center gap-3">
-                                 <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-white/20 border border-white/5 shrink-0 overflow-hidden">
-                                    {(apt as Appointment).client?.avatar_url ? <Image src={(apt as Appointment).client!.avatar_url!} width={32} height={32} alt={apt.client?.name || 'Cliente'} className="w-full h-full object-cover" /> : <User size={14} />}
+                              <div className="flex items-center gap-4">
+                                 <div className="w-10 h-10 rounded-full bg-brand/10 flex items-center justify-center text-brand/50 border border-brand/20 shrink-0 overflow-hidden">
+                                    {(apt as Appointment).client?.avatar_url ? <Image src={(apt as Appointment).client!.avatar_url!} width={40} height={40} alt={apt.client?.name || 'Cliente'} className="w-full h-full object-cover" /> : <User size={16} />}
                                  </div>
                                  <div className="min-w-0">
-                                    <p className="text-[10px] font-black text-white uppercase truncate max-w-[120px] leading-none mb-1">{apt.client?.name || apt.client_name}</p>
+                                    <p className="text-[11px] font-black text-zinc-900 uppercase truncate max-w-[140px] leading-none mb-1">{apt.client?.name || apt.client_name}</p>
                                     <div className="flex items-center gap-2">
-                                       <span className="text-[7px] font-black text-white/20 uppercase tracking-widest">{format(new Date(apt.start_time), 'dd/MM')}</span>
+                                       <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest">{format(new Date(apt.start_time), 'dd/MM/yy')}</span>
                                     </div>
                                  </div>
                               </div>
-                              <p className="text-[11px] font-black italic text-[#f59e0b]">{formatPrice((Number(apt.price) * commission) / 100)}</p>
+                              <p className="text-[12px] font-black italic text-brand">{formatPrice((Number(apt.price) * commission) / 100)}</p>
                            </div>
                         ))
                      )}
@@ -187,32 +181,28 @@ export default function BarberStatsPage() {
 
             {/* SECCION DE HISTORIAL DE LIQUIDACIONES */}
             <div className="space-y-8">
-               <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white/30 px-2 flex items-center gap-3">
+               <h3 className="text-sm font-black uppercase tracking-[0.2em] text-zinc-400 px-2 flex items-center gap-3">
                   <CheckCircle2 size={16} /> Historial de Cierres
                </h3>
-               <div className="mb-24 space-y-4 max-h-[600px] overflow-y-auto custom-scrollbar">
+               <div className="mb-24 space-y-4 max-h-[600px] overflow-y-auto custom-scrollbar border-t border-accent-green/20 mt-4">
                   {finance.settlements.length === 0 ? (
-                     <div className="py-24 text-center border-2 border-dashed border-white/5 rounded-[3rem] opacity-20">
-                        <p className="text-[10px] font-black uppercase tracking-[0.4em]">Sin pagos registrados</p>
+                     <div className="py-20 text-center border-b border-accent-green/20 opacity-30">
+                        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">Sin pagos registrados</p>
                      </div>
                   ) : (
-                     <div className="flex flex-col -space-y-px">
-                        {finance.settlements.map((s: Settlement, idx, arr) => (
+                     <div className="flex flex-col border-t border-accent-green/20">
+                        {finance.settlements.map((s: Settlement) => (
                            <div
                               key={s.id}
-                              className={`
-                             bg-black/80 border border-white/10 p-4 transition-all group relative overflow-hidden z-10 hover:z-20 hover:bg-white/[0.02]
-                             ${idx === 0 ? 'rounded-t-2xl' : ''}
-                             ${idx === arr.length - 1 ? 'rounded-b-2xl' : ''}
-                           `}
+                              className="border-b border-accent-green/20 py-6 transition-all group relative hover:bg-brand/5 px-2 z-10"
                            >
                               <div className="relative z-10 flex justify-between items-center">
                                  <div className="space-y-1">
-                                    <p className="text-[8px] font-black uppercase tracking-widest text-[#f59e0b]">{format(new Date(s.created_at), 'dd/MM/yyyy')}</p>
-                                    <p className="text-[11px] font-black text-white uppercase tracking-tight italic">Cierre Efectuado</p>
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-brand">{format(new Date(s.created_at), 'dd/MM/yyyy')}</p>
+                                    <p className="text-[12px] font-black text-zinc-900 uppercase tracking-tight italic">Cierre Efectuado</p>
                                  </div>
                                  <div className="text-right">
-                                    <p className="text-lg font-black italic text-emerald-500 leading-none">{formatPrice(s.barber_earnings)}</p>
+                                    <p className="text-xl font-black italic text-emerald-500 leading-none">{formatPrice(s.barber_earnings)}</p>
                                  </div>
                               </div>
                            </div>
@@ -226,18 +216,18 @@ export default function BarberStatsPage() {
          {/* CALENDARIO DE FILTRO */}
          {showCalendar && (
             <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 animate-in fade-in duration-300">
-               <div className="absolute inset-0 bg-black/90 backdrop-blur-xl" onClick={() => setShowCalendar(false)} />
-               <div className="relative bg-[#0a0a0a] border border-white/10 rounded-[3rem] p-10 shadow-2xl animate-in zoom-in-95 duration-300 max-w-[420px] w-full">
-                  <div className="flex justify-between items-center mb-10">
+               <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowCalendar(false)} />
+               <div className="relative bg-surface border border-accent-green/20 rounded-2xl p-10 shadow-2xl animate-in zoom-in-95 duration-300 max-w-[420px] w-full">
+                  <div className="flex justify-between items-center mb-8 border-b border-accent-green/20 pb-6">
                      <div className="space-y-1">
-                        <h3 className="text-[#f59e0b] text-[10px] font-black uppercase tracking-[0.4em]">Filtro</h3>
-                        <p className="text-2xl font-black text-white italic tracking-tighter">Periodo de Tiempo</p>
+                        <h3 className="text-brand text-[10px] font-black uppercase tracking-[0.4em]">Filtro</h3>
+                        <p className="text-2xl font-black text-zinc-900 italic tracking-tighter">Periodo</p>
                      </div>
-                     <button onClick={() => setShowCalendar(false)} className="bg-white/5 p-3 rounded-2xl text-white/40 hover:text-white transition-colors">
+                     <button onClick={() => setShowCalendar(false)} className="text-zinc-400 hover:text-zinc-900 transition-colors">
                         <X size={24} />
                      </button>
                   </div>
-                  <div className="bg-white rounded-[2.5rem] p-6 flex justify-center">
+                  <div className="flex justify-center bg-brand/5 rounded-3xl p-4 border border-brand/20">
                      <DayPicker
                         mode="range"
                         selected={range}
@@ -246,19 +236,21 @@ export default function BarberStatsPage() {
                         className="rdp-stats-custom"
                      />
                   </div>
-                  <button
-                     onClick={() => setShowCalendar(false)}
-                     className="w-full mt-10 bg-[#f59e0b] text-black py-6 rounded-[2rem] font-black uppercase tracking-[0.3em] text-[11px] shadow-2xl shadow-amber-500/10 active:scale-95 transition-all"
-                  >
-                     Aplicar Filtro
-                  </button>
+                  <div className="pt-8 mt-6 border-t border-accent-green/20">
+                     <button
+                        onClick={() => setShowCalendar(false)}
+                        className="w-full border border-brand/30 text-brand hover:bg-brand/10 py-5 rounded-2xl font-black uppercase tracking-[0.3em] text-[11px] transition-all"
+                     >
+                        Aplicar Filtro
+                     </button>
+                  </div>
                </div>
             </div>
          )}
 
          <style>{`
-         .rdp-stats-custom { --rdp-cell-size: 45px; --rdp-accent-color: #f59e0b; color: #111; }
-         .rdp-day_selected { background-color: #f59e0b !important; color: black !important; font-weight: 900; }
+         .rdp-stats-custom { --rdp-cell-size: 45px; --rdp-accent-color: var(--color-accent-pink); color: #18181b; }
+         .rdp-day_selected { background-color: var(--color-accent-pink) !important; color: white !important; font-weight: 900; }
       `}</style>
       </div>
    );

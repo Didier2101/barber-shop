@@ -7,218 +7,275 @@ import {
   Edit,
   Tag,
   Plus,
-  Zap
+  Zap,
+  X,
+  Search
 } from 'lucide-react';
 import { format } from 'date-fns';
 import Swal from 'sweetalert2';
 import { PromotionForm } from '@/components/forms/PromotionForm';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Promotion } from '@/types';
+import { formatPrice } from '@/lib/format';
+import { motion, AnimatePresence } from 'framer-motion';
+
+const EMPTY_PROMOTIONS: Promotion[] = [];
 
 export default function PromotionsPage() {
   const { data: baseData, isLoading: baseLoading } = useOwnerBaseData();
   const { updateLoyalty, deletePromotion } = useOwnerMutations();
   
+  const [searchTerm, setSearchTerm] = useState('');
   const [selectedPromo, setSelectedPromo] = useState<Promotion | null>(null);
-  const [isCreating, setIsCreating] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  const promotions = baseData?.promotions || [];
+  const promotions = useMemo(() => baseData?.promotions || EMPTY_PROMOTIONS, [baseData?.promotions]);
   const loyaltySettings = baseData?.loyaltySettings || { appointments_threshold: 10, is_enabled: true };
 
-  if (baseLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="w-8 h-8 border-4 border-brand/20 border-t-brand rounded-full animate-spin"></div>
-      </div>
-    );
-  }
+  const filteredPromotions = useMemo(() => {
+     if (!searchTerm) return promotions;
+     return promotions.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
+  }, [promotions, searchTerm]);
 
-  const handleEdit = (promo: Promotion) => {
-    setIsCreating(false);
-    setSelectedPromo(promo);
+  const openDrawer = (promo?: Promotion) => {
+    setSelectedPromo(promo || null);
+    setIsDrawerOpen(true);
   };
 
-  const handleNew = () => {
+  const closeDrawer = () => {
     setSelectedPromo(null);
-    setIsCreating(true);
+    setIsDrawerOpen(false);
   };
 
-  const closeForm = () => {
-    setSelectedPromo(null);
-    setIsCreating(false);
+  const handleDelete = (id: string, name: string) => {
+    Swal.fire({
+      title: `¿Eliminar ${name}?`,
+      text: 'Esta promoción desaparecerá del sistema.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: 'var(--color-erp-primary)',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    }).then(result => {
+      if (result.isConfirmed) {
+        deletePromotion.mutate(id, {
+           onSuccess: () => {
+              if (selectedPromo?.id === id) closeDrawer();
+           }
+        });
+      }
+    });
   };
 
   return (
-    <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-8xl mx-auto pb-32">
+    <div className="space-y-6 max-w-7xl mx-auto pb-32 font-sans animate-in fade-in slide-in-from-bottom-4 duration-500">
       
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
-        {/* LADO IZQUIERDO: Fidelización y Lista de Promociones */}
-        <div className="lg:col-span-6 space-y-8">
-          
-          {/* FIDELIZACIÓN */}
-          <div className="space-y-4">
-            <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/40 px-2 flex items-center gap-2">
-              <Gift size={12} className="text-brand" /> Programa de Fidelización
-            </h3>
-            <div className="bg-black border border-white/5 rounded-2xl p-6 shadow-xl relative overflow-hidden group">
-              <div className="relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                  <h3 className="text-base font-bold text-white tracking-tight">Cortes Gratis Automáticos</h3>
-                  <p className="text-xs text-white/40 mt-1 max-w-xs">Premiarás al cliente tras cumplir la meta.</p>
-                </div>
-                <button
-                  onClick={() => updateLoyalty.mutate({
-                    appointments_threshold: loyaltySettings.appointments_threshold,
-                    is_enabled: !loyaltySettings.is_enabled
-                  })}
-                  className={`px-4 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all flex items-center gap-2 ${loyaltySettings.is_enabled ? 'bg-brand text-black shadow-lg shadow-brand/20' : 'bg-bg-base text-white/40 border border-white/10'}`}
-                >
-                  <Zap size={12} className={loyaltySettings.is_enabled ? 'animate-pulse' : ''} />
-                  {loyaltySettings.is_enabled ? 'Activo' : 'Pausado'}
-                </button>
-              </div>
+      {/* HEADER ERP */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-erp-bg border border-erp-border p-6 rounded-2xl shadow-sm">
+         <div>
+            <h2 className="text-2xl font-black text-erp-text tracking-tight flex items-center gap-3">
+               <Gift size={24} className="text-erp-primary" />
+               Promociones y Fidelización
+            </h2>
+            <p className="text-sm font-medium text-erp-text-muted mt-1">Atrae clientes y premia su lealtad</p>
+         </div>
+      </div>
 
-              <div className="mt-6 pt-6 border-t border-white/5 relative z-10 flex flex-col sm:flex-row sm:items-center gap-4">
-                <div className="space-y-1 flex-1">
-                  <label className="text-[9px] font-medium uppercase tracking-wider text-white/40">Visitas para Premio</label>
-                  <input
-                    type="number"
-                    className="w-full bg-bg-base border border-white/10 rounded-xl py-3 px-4 text-xl font-bold text-white outline-none focus:border-brand transition-all max-w-[120px]"
-                    value={loyaltySettings.appointments_threshold}
-                    onChange={(e) => updateLoyalty.mutate({
-                      appointments_threshold: parseInt(e.target.value) || 10,
-                      is_enabled: loyaltySettings.is_enabled
-                    })}
-                  />
-                </div>
-                <p className="text-[10px] text-white/50 leading-relaxed sm:max-w-[200px]">
-                  Al completar esta cantidad, el sistema le asignará una recompensa automáticamente.
-                </p>
-              </div>
+      {/* PROGRAMA DE FIDELIZACIÓN (TARJETA HORIZONTAL) */}
+      <div className="bg-erp-surface border border-erp-border rounded-2xl p-6 shadow-sm relative overflow-hidden flex flex-col md:flex-row justify-between items-center gap-6">
+         <div className="flex items-center gap-4 w-full md:w-auto">
+            <div className={`p-4 rounded-xl shrink-0 ${loyaltySettings.is_enabled ? 'bg-erp-primary text-white shadow-md' : 'bg-erp-bg text-erp-text-muted border border-erp-border'}`}>
+               <Zap size={24} className={loyaltySettings.is_enabled ? 'animate-pulse' : ''} />
             </div>
-          </div>
+            <div>
+               <h3 className="text-lg font-black text-erp-text tracking-tight">Programa de Cortes Gratis</h3>
+               <p className="text-sm text-erp-text-muted font-medium mt-0.5">Premia automáticamente a tus clientes recurrentes.</p>
+            </div>
+         </div>
 
-          {/* LISTA DE OFERTAS */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between px-2">
-              <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/40 flex items-center gap-2">
-                <Tag size={12} className="text-brand" /> Ofertas Activas
-              </h3>
-              <button 
-                onClick={handleNew}
-                className="flex items-center gap-2 bg-brand/10 text-brand px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider hover:bg-brand hover:text-black transition-all"
-              >
-                <Plus size={12} />
-                Nueva Oferta
-              </button>
+         <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
+            <div className="flex items-center gap-2 bg-erp-bg border border-erp-border px-4 py-2 rounded-xl">
+               <span className="text-xs font-bold text-erp-text-muted uppercase tracking-wider">Visitas Meta:</span>
+               <input
+                  type="number"
+                  min="1"
+                  className="w-16 bg-transparent text-lg font-black text-erp-text outline-none text-center"
+                  value={loyaltySettings.appointments_threshold}
+                  onChange={(e) => updateLoyalty.mutate({
+                     appointments_threshold: parseInt(e.target.value) || 10,
+                     is_enabled: loyaltySettings.is_enabled
+                  })}
+               />
+            </div>
+
+            <button
+               onClick={() => updateLoyalty.mutate({
+                  appointments_threshold: loyaltySettings.appointments_threshold,
+                  is_enabled: !loyaltySettings.is_enabled
+               })}
+               className={`w-full sm:w-auto px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${loyaltySettings.is_enabled ? 'bg-erp-primary text-white hover:opacity-90 shadow-sm' : 'bg-erp-bg border border-erp-border text-erp-text hover:bg-erp-surface'}`}
+            >
+               {loyaltySettings.is_enabled ? 'Programa Activo' : 'Programa Pausado'}
+            </button>
+         </div>
+      </div>
+
+      {/* HEADER DE LA TABLA */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mt-8 mb-4">
+         <h3 className="text-lg font-black uppercase tracking-tight text-erp-text flex items-center gap-2">
+            <Tag size={18} className="text-erp-primary" /> Ofertas Activas
+         </h3>
+         
+         <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
+            <div className="relative group shadow-sm w-full sm:w-72">
+               <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                  <Search size={16} className="text-erp-text-muted group-focus-within:text-erp-primary transition-colors" />
+               </div>
+               <input
+                  type="text"
+                  placeholder="Buscar oferta..."
+                  className="w-full bg-erp-bg border border-erp-border rounded-xl py-2.5 pl-11 pr-4 text-sm text-erp-text outline-none focus:border-erp-primary/50 transition-all"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+               />
             </div>
             
-            <div className="bg-black border border-white/5 rounded-2xl overflow-hidden shadow-xl flex flex-col h-[50vh]">
-              {promotions.length === 0 ? (
-                <div className="flex-1 p-16 flex flex-col items-center justify-center text-center opacity-40">
-                  <Tag size={32} className="text-white/20 mb-4" />
-                  <p className="text-xs font-medium text-white uppercase tracking-wider">No hay promociones</p>
-                </div>
-              ) : (
-                <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col p-2 space-y-2">
-                  {promotions.map((promo) => {
-                    const isSelected = selectedPromo?.id === promo.id;
-                    const discountText = promo.discount_type === 'percentage' ? `${promo.discount_value}%` : promo.discount_type === 'free' ? 'GRATIS' : `{formatPrice(promo.discount_value)}`;
-                    return (
-                      <div 
-                        key={promo.id} 
-                        className={`w-full p-4 rounded-xl border flex items-center justify-between transition-all group ${isSelected ? 'bg-brand/10 border-brand/30' : 'bg-bg-base border-white/5 hover:border-white/10'}`}
-                      >
-                        <div className="flex-1 min-w-0 pr-4">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-[9px] font-bold uppercase tracking-widest text-brand bg-brand/10 px-2 py-0.5 rounded">
-                              {discountText}
-                            </span>
-                          </div>
-                          <p className={`text-sm font-bold uppercase truncate mb-0.5 ${isSelected ? 'text-brand' : 'text-white'}`}>
-                            {promo.name}
-                          </p>
-                          <div className="flex items-center gap-1.5 text-[9px] font-medium text-white/40 uppercase tracking-wider">
-                            <Clock size={10} />
-                            <span>
-                              {format(new Date(promo.start_date.split('T')[0] + 'T12:00:00'), 'dd MMM')} → {format(new Date(promo.end_date.split('T')[0] + 'T12:00:00'), 'dd MMM')}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex gap-1 shrink-0">
-                          <button 
-                            onClick={() => handleEdit(promo)}
-                            className={`p-2 rounded-lg transition-all ${isSelected ? 'bg-brand text-black shadow-md' : 'text-white/20 hover:text-brand hover:bg-brand/10'}`}
-                          >
-                            <Edit size={14} />
-                          </button>
-                          <button 
-                            onClick={() => {
-                              Swal.fire({
-                                title: '¿ELIMINAR OFERTA?',
-                                text: 'Esta promoción desaparecerá del sistema.',
-                                icon: 'warning',
-                                showCancelButton: true,
-                                confirmButtonColor: '#ef4444',
-                                confirmButtonText: 'ELIMINAR',
-                                cancelButtonText: 'CANCELAR',
-                                background: '#111',
-                                color: '#fff'
-                              }).then(result => {
-                                if (result.isConfirmed) {
-                                  deletePromotion.mutate(promo.id);
-                                  if (selectedPromo?.id === promo.id) closeForm();
-                                }
-                              });
-                            }}
-                            className="p-2 text-white/20 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
-                          >
-                            <Trash size={14} />
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* LADO DERECHO: Formulario de Promoción */}
-        <div className="lg:col-span-6">
-          {isCreating || selectedPromo ? (
-            <div className="animate-in fade-in slide-in-from-right-4 duration-500">
-              <div className="mb-6 flex items-center justify-between px-2">
-                <div>
-                  <h3 className="text-xl font-bold text-white uppercase tracking-tight">
-                    {isCreating ? 'Nueva Oferta' : 'Editar Oferta'}
-                  </h3>
-                  <p className="text-[10px] text-brand font-medium tracking-widest uppercase mt-1">Configuración del beneficio</p>
-                </div>
-              </div>
-              <PromotionForm 
-                initialData={selectedPromo || undefined} 
-                isEditing={!!selectedPromo}
-                onSuccess={closeForm}
-                onCancel={closeForm}
-              />
-            </div>
-          ) : (
-            <div className="h-full min-h-[60vh] border border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center text-center p-12 opacity-60">
-              <div className="p-6 bg-black border border-white/10 rounded-2xl mb-6">
-                <Tag size={40} className="text-white/20" />
-              </div>
-              <h4 className="text-lg font-bold text-white uppercase tracking-wider mb-2">Editor de Ofertas</h4>
-              <p className="text-xs text-white/40 font-medium uppercase tracking-wider max-w-xs leading-relaxed">
-                Selecciona una promoción de la lista para editarla o haz clic en &quot;Nueva Oferta&quot; para crear un descuento.
-              </p>
-            </div>
-          )}
-        </div>
+            <button 
+               onClick={() => openDrawer()}
+               className="w-full sm:w-auto flex items-center justify-center gap-2 bg-erp-primary text-white px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider hover:opacity-90 transition-all shadow-sm"
+            >
+               <Plus size={16} />
+               Nueva Oferta
+            </button>
+         </div>
       </div>
+
+      {/* DATA GRID (TABLA) */}
+      <div className="bg-erp-surface border border-erp-border rounded-2xl shadow-sm overflow-hidden flex flex-col min-h-[40vh]">
+         {baseLoading ? (
+            <div className="flex-1 flex items-center justify-center">
+               <div className="w-8 h-8 border-4 border-erp-primary/20 border-t-erp-primary rounded-full animate-spin"></div>
+            </div>
+         ) : filteredPromotions.length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center text-center opacity-60 p-12">
+               <Tag size={48} className="text-erp-text-muted mb-4" />
+               <p className="text-sm font-bold text-erp-text uppercase tracking-widest">No hay ofertas activas</p>
+               {searchTerm && <p className="text-xs text-erp-text-muted mt-2">Intenta con otra búsqueda</p>}
+            </div>
+         ) : (
+            <div className="flex-1 overflow-x-auto custom-scrollbar">
+               <table className="w-full text-left border-collapse">
+                  <thead>
+                     <tr className="bg-erp-bg border-b border-erp-border">
+                        <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-erp-text-muted whitespace-nowrap">Nombre de la Oferta</th>
+                        <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-erp-text-muted whitespace-nowrap text-center">Beneficio</th>
+                        <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-erp-text-muted whitespace-nowrap">Vigencia</th>
+                        <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-erp-text-muted text-right whitespace-nowrap">Acciones</th>
+                     </tr>
+                  </thead>
+                  <tbody className="divide-y divide-erp-border">
+                     {filteredPromotions.map((promo) => {
+                        const discountText = promo.discount_type === 'percentage' ? `${promo.discount_value}%` : promo.discount_type === 'free' ? 'GRATIS' : `${formatPrice(promo.discount_value)}`;
+                        return (
+                           <tr
+                              key={promo.id}
+                              onClick={() => openDrawer(promo)}
+                              className="cursor-pointer group bg-erp-bg hover:bg-erp-surface transition-colors"
+                           >
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                 <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-lg overflow-hidden border border-erp-border bg-erp-surface flex items-center justify-center shrink-0 text-erp-primary">
+                                       <Gift size={18} />
+                                    </div>
+                                    <p className="text-sm font-bold text-erp-text uppercase tracking-tight">{promo.name}</p>
+                                 </div>
+                              </td>
+                              <td className="px-6 py-4 text-center whitespace-nowrap">
+                                 <span className="inline-flex items-center justify-center px-3 py-1 rounded-md bg-erp-primary/10 border border-erp-primary/20 text-erp-primary text-[10px] font-black uppercase tracking-widest">
+                                    {discountText}
+                                 </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                 <div className="flex items-center gap-2 text-xs font-bold text-erp-text-muted">
+                                    <Clock size={14} className="text-erp-primary" /> 
+                                    {format(new Date(promo.start_date.split('T')[0] + 'T12:00:00'), 'dd MMM')} → {format(new Date(promo.end_date.split('T')[0] + 'T12:00:00'), 'dd MMM')}
+                                 </div>
+                              </td>
+                              <td className="px-6 py-4 text-right whitespace-nowrap">
+                                 <div className="flex items-center justify-end gap-2">
+                                    <button 
+                                       onClick={(e) => {
+                                          e.stopPropagation();
+                                          openDrawer(promo);
+                                       }}
+                                       className="p-2 rounded-lg border border-erp-border text-erp-text-muted hover:bg-erp-primary/10 hover:text-erp-primary hover:border-erp-primary/30 transition-all"
+                                       title="Editar"
+                                    >
+                                       <Edit size={16} />
+                                    </button>
+                                    <button 
+                                       onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleDelete(promo.id, promo.name);
+                                       }}
+                                       className="p-2 rounded-lg border border-erp-border text-erp-text-muted hover:bg-red-500/10 hover:text-red-600 hover:border-red-500/30 transition-all"
+                                       title="Eliminar"
+                                    >
+                                       <Trash size={16} />
+                                    </button>
+                                 </div>
+                              </td>
+                           </tr>
+                        );
+                     })}
+                  </tbody>
+               </table>
+            </div>
+         )}
+      </div>
+
+      {/* DRAWER (PANEL LATERAL) - CREAR / EDITAR */}
+      <AnimatePresence>
+         {isDrawerOpen && (
+            <>
+               <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={closeDrawer}
+                  className="fixed inset-0 bg-transparent z-[200]"
+               />
+
+               <motion.div
+                  initial={{ x: '100%' }}
+                  animate={{ x: 0 }}
+                  exit={{ x: '100%' }}
+                  transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                  className="fixed top-0 right-0 w-full sm:w-[450px] md:w-[500px] h-full bg-erp-bg border-l border-erp-border shadow-2xl z-[210] flex flex-col"
+               >
+                  <div className="flex items-center justify-between p-6 border-b border-erp-border bg-erp-surface">
+                     <h3 className="text-lg font-black uppercase tracking-tight text-erp-text flex items-center gap-3">
+                        {selectedPromo ? <Edit size={20} className="text-erp-primary" /> : <Plus size={20} className="text-erp-primary" />}
+                        {selectedPromo ? 'Editar Oferta' : 'Nueva Oferta'}
+                     </h3>
+                     <button onClick={closeDrawer} className="p-2 text-erp-text-muted hover:text-erp-text hover:bg-erp-text/5 rounded-full transition-all">
+                        <X size={20} />
+                     </button>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                     <PromotionForm 
+                        initialData={selectedPromo || undefined} 
+                        isEditing={!!selectedPromo}
+                        onSuccess={closeDrawer}
+                     />
+                  </div>
+
+               </motion.div>
+            </>
+         )}
+      </AnimatePresence>
     </div>
   );
 }
